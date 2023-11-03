@@ -12,9 +12,9 @@ remappings = [
     '@openzeppelin/=lib/openzeppelin-contracts/',
     'solarray/=lib/solarray/src/',
     'solady/=lib/solady/',
-    'seaport-sol/=lib/seaport-sol/',
-    'seaport-types/=lib/seaport-types/',
-    'seaport-core/=lib/seaport-core/',
+    'seaport-sol/=seaport-sol/',
+    'seaport-types/=seaport-types/',
+    'seaport-core/=seaport-core/',
     'seaport/=contracts/'
 ]
 optimizer_runs = 4_294_967_295
