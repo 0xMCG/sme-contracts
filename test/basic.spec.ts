@@ -3828,12 +3828,16 @@ describe(`Basic buy now or accept offer flows (Seaport v${VERSION})`, function (
           return receipt;
         });
       });
-      it("ERC1155 <=> ERC20 (match)", async () => {
+
+      it.only("ERC1155 <=> ERC20 (match)", async () => {
+        console.log(`seller: ${seller.address}; buyer: ${buyer.address}; zone: ${zone.address}`);
+
         // Seller mints nft
         const { nftId, amount } = await mintAndApprove1155(
           seller,
           marketplaceContract.address
         );
+        console.log(`mintAndApprove1155, nftId: ${nftId}; amount: ${amount}`);
 
         // Buyer mints ERC20
         const tokenAmount = minRandom(100);
@@ -3842,6 +3846,7 @@ describe(`Basic buy now or accept offer flows (Seaport v${VERSION})`, function (
           marketplaceContract.address,
           tokenAmount
         );
+        console.log(`buyer ERC20 token amount: ${tokenAmount}`);
 
         const offer = [getTestItem1155(nftId, amount, amount)];
 
@@ -3862,12 +3867,18 @@ describe(`Basic buy now or accept offer flows (Seaport v${VERSION})`, function (
           consideration,
           0 // FULL_OPEN
         );
+        console.log('Order', order);
+        console.log('Order offer', order.parameters.offer);
+        console.log('Order consideration', order.parameters.consideration);
 
         const { mirrorOrder, mirrorOrderHash } = await createMirrorBuyNowOrder(
           buyer,
           zone,
           order
         );
+        console.log('Mirror Buy Order', mirrorOrder);
+        console.log('Mirror Buy Order offer', mirrorOrder.parameters.offer);
+        console.log('Mirror Buy Order consideration', mirrorOrder.parameters.consideration);
 
         const fulfillments = defaultBuyNowMirrorFulfillment;
 
@@ -3904,6 +3915,7 @@ describe(`Basic buy now or accept offer flows (Seaport v${VERSION})`, function (
         );
         return receipt;
       });
+
       it("ERC1155 <=> ERC20 (match via conduit)", async () => {
         // Seller mints nft
         const { nftId, amount } = await mintAndApprove1155(

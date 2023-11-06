@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import "hardhat/console.sol";
+
 import {ConsiderationInterface} from "seaport-types/src/interfaces/ConsiderationInterface.sol";
 
 import {
@@ -486,6 +488,8 @@ contract Consideration is ConsiderationInterface, OrderCombiner {
          */
         Fulfillment[] calldata
     ) external payable override returns (Execution[] memory /* executions */ ) {
+        console.log('matchOrders, msg.sender: %s', msg.sender);
+
         // Convert to advanced, validate, and match orders using fulfillments.
         return _matchAdvancedOrders(
             _toAdvancedOrdersReturnType(_decodeOrdersAsAdvancedOrders)(CalldataStart.pptr()),
