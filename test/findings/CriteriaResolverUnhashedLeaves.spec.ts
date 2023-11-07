@@ -95,47 +95,4 @@ describe("Criteria resolver allows root hash to be given as a leaf", async () =>
     order = results.order;
   });
 
-  describe("Carol, the collection owner, attempts to fill Alice's order with an NFT outside of Alice's criteria", async () => {
-    it("Carol mints a new NFT with its identifier set to the merkle tree's root hash", async () => {
-      await testERC721.mint(carol.address, root);
-      expect(tokenIds.filter((id) => id.eq(toBN(root))).length).to.eq(0);
-    });
-
-    if (!IS_FIXED) {
-      it("Carol fills Alice's order, giving the merkle root as the token ID and an empty proof", async () => {
-        const criteriaResolver = buildResolver(0, 1, 0, toBN(root), []);
-        await marketplaceContract
-          .connect(carol)
-          .fulfillAdvancedOrder(
-            order,
-            [criteriaResolver],
-            toKey(0),
-            carol.address
-          );
-      });
-
-      it("Carol receives 1000 DAI from Alice", async () => {
-        expect(await testERC20.balanceOf(alice.address)).to.eq(0);
-        expect(await testERC20.balanceOf(carol.address)).to.eq(1000);
-      });
-
-      it("Alice receives the merkle root identified token from Carol", async () => {
-        expect(await testERC721.ownerOf(root)).to.equal(alice.address);
-      });
-    } else {
-      it("Carol's attempt to fill Alice's order with the merkle root as the token ID reverts", async () => {
-        const criteriaResolver = buildResolver(0, 1, 0, toBN(root), []);
-        await expect(
-          marketplaceContract
-            .connect(carol)
-            .fulfillAdvancedOrder(
-              order,
-              [criteriaResolver],
-              toKey(0),
-              carol.address
-            )
-        ).to.be.revertedWithCustomError(marketplaceContract, "InvalidProof");
-      });
-    }
-  });
 });

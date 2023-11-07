@@ -141,6 +141,9 @@ const config: HardhatUserConfig = {
     verificationNetwork: {
       url: process.env.NETWORK_RPC ?? "",
     },
+    sepolia: {
+      url: "https://eth-sepolia.public.blastapi.io"
+    }
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
