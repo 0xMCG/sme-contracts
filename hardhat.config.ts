@@ -135,15 +135,23 @@ const config: HardhatUserConfig = {
     hardhat: {
       blockGasLimit: 30_000_000,
       throwOnCallFailures: false,
-      // Temporarily remove contract size limit for local test 
-      allowUnlimitedContractSize: true,
+      // Temporarily remove contract size limit for local test
+      allowUnlimitedContractSize: false,
     },
     verificationNetwork: {
       url: process.env.NETWORK_RPC ?? "",
     },
     sepolia: {
-      url: "https://eth-sepolia.public.blastapi.io"
-    }
+      url: "https://eth-sepolia.public.blastapi.io",
+    },
+    arb: {
+      url: "https://arbitrum-one.public.blastapi.io",
+      accounts: [`${process.env.PRIVATE_KEY}`],
+    },
+    arb_goerli: {
+      url: "https://arbitrum-goerli.public.blastapi.io",
+      accounts: [`${process.env.PRIVATE_KEY}`],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -152,7 +160,28 @@ const config: HardhatUserConfig = {
     noColors: true,
   },
   etherscan: {
-    apiKey: process.env.EXPLORER_API_KEY,
+    apiKey: {
+      arb: process.env.ETHERSCAN_KEY || "",
+      arb_goerli: process.env.ETHERSCAN_KEY || "",
+    },
+    customChains: [
+      {
+        network: "arb",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io/",
+        },
+      },
+      {
+        network: "arb_goerli",
+        chainId: 421613,
+        urls: {
+          apiURL: "https://api-goerli.arbiscan.io/api",
+          browserURL: "https://goerli.arbiscan.io/",
+        },
+      },
+    ],
   },
   // specify separate cache for hardhat, since it could possibly conflict with foundry's
   paths: { cache: "hh-cache" },
