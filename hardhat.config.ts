@@ -161,8 +161,8 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      arb: process.env.ETHERSCAN_KEY || "",
-      arb_goerli: process.env.ETHERSCAN_KEY || "",
+      arb: process.env.ARBSCAN_KEY || "",
+      arb_goerli: process.env.ARBSCAN_KEY || "",
     },
     customChains: [
       {

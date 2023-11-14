@@ -106,6 +106,7 @@ async function main() {
   }
   json["Conduit"] = conduit;
   writeJson(json);
+
   // updateChannel
   let chennels = await lcc.getChannels(conduit.conduit);
   if (!chennels.find((item) => item === seaportAddress)) {
@@ -115,6 +116,7 @@ async function main() {
     chennels = await lcc.getChannels(conduit.conduit);
   }
   console.info("updated channel:", chennels);
+
   // addMember
   const seaport = await ethers.getContractAt("Seaport", seaportAddress);
   await seaport
@@ -123,5 +125,11 @@ async function main() {
     })
     .then((tx) => tx.wait(1));
   console.info("added members");
+
+  // updateVRF
+  const oldVrf = await seaport.vrfOwner();
+  if (oldVrf !== vrfAddress)
+    await seaport.updateVRFAddress(vrfAddress).then((tx) => tx.wait(1));
+  console.info("updated vrf");
 }
 main();
