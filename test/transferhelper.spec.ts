@@ -4,12 +4,7 @@ import { ethers, network } from "hardhat";
 
 import { randomHex } from "./utils/encoding";
 import { faucet } from "./utils/faucet";
-import {
-  fixtureERC1155,
-  fixtureERC20,
-  fixtureERC721,
-  seaportFixture,
-} from "./utils/fixtures";
+import { fixtureERC1155, fixtureERC20, fixtureERC721, seaportFixture } from "./utils/fixtures";
 import { VERSION } from "./utils/helpers";
 
 import type {
@@ -41,12 +36,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
   before(async () => {
     await faucet(owner.address, provider);
 
-    ({
-      EIP1271WalletFactory,
-      conduitController,
-      deployNewConduit,
-      createTransferWithApproval,
-    } = await seaportFixture(owner));
+    ({ EIP1271WalletFactory, conduitController, deployNewConduit, createTransferWithApproval } = await seaportFixture(owner));
   });
 
   let sender: Wallet;
@@ -95,11 +85,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
     };
   }
 
-  function createTransferWithRecipient(
-    transfers: Transfer[],
-    recipient: string,
-    validate: boolean
-  ): TransferWithRecipient {
+  function createTransferWithRecipient(transfers: Transfer[], recipient: string, validate: boolean): TransferWithRecipient {
     const transferHelperItems = [];
     for (let i = 0; i < transfers.length; i++) {
       transferHelperItems[i] = createTransferHelperItem(transfers[i]);
@@ -127,27 +113,15 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
     tempConduitKey = owner.address + randomHex(12).slice(2);
     tempConduit = await deployNewConduit(owner, tempConduitKey);
 
-    for (const wallet of [
-      sender,
-      recipient,
-      zone,
-      senderContract,
-      recipientContract,
-    ]) {
+    for (const wallet of [sender, recipient, zone, senderContract, recipientContract]) {
       await faucet(wallet.address, provider);
     }
 
     // Deploy a new TransferHelper with the tempConduitController address
-    const transferHelperFactory = await ethers.getContractFactory(
-      "TransferHelper"
-    );
-    tempTransferHelper = await transferHelperFactory.deploy(
-      conduitController.address
-    );
+    const transferHelperFactory = await ethers.getContractFactory("TransferHelper");
+    tempTransferHelper = await transferHelperFactory.deploy(conduitController.address);
 
-    await conduitController
-      .connect(owner)
-      .updateChannel(tempConduit.address, tempTransferHelper.address, true);
+    await conduitController.connect(owner).updateChannel(tempConduit.address, tempTransferHelper.address, true);
   });
 
   describe("Single recipient tests", async () => {
@@ -204,9 +178,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       // Create numERC1155s amount of ERC1155 objects
       for (let i = 0; i < numERC1155s; i++) {
         // Deploy Contract
-        const { testERC1155: tempERC1155Contract } = await fixtureERC1155(
-          owner
-        );
+        const { testERC1155: tempERC1155Contract } = await fixtureERC1155(owner);
         // Create/Approve numERC1155s amount of ERC1155s
         const erc1155Transfer = await createTransferWithApproval(
           tempERC1155Contract,
@@ -220,66 +192,37 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         erc1155Transfers[i] = erc1155Transfer;
       }
 
-      const transfers = [
-        ...erc20Transfers,
-        ...erc721Transfers,
-        ...erc1155Transfers,
-      ];
-      const contracts = [
-        ...erc20Contracts,
-        ...erc721Contracts,
-        ...erc1155Contracts,
-      ];
+      const transfers = [...erc20Transfers, ...erc721Transfers, ...erc1155Transfers];
+      const contracts = [...erc20Contracts, ...erc721Contracts, ...erc1155Contracts];
 
       const transfersWithRecipients = [];
 
-      transfersWithRecipients[0] = createTransferWithRecipient(
-        transfers,
-        recipient.address,
-        true
-      );
+      transfersWithRecipients[0] = createTransferWithRecipient(transfers, recipient.address, true);
 
       // Send the bulk transfers
-      await tempTransferHelper
-        .connect(sender)
-        .bulkTransfer(transfersWithRecipients, tempConduitKey);
+      await tempTransferHelper.connect(sender).bulkTransfer(transfersWithRecipients, tempConduitKey);
 
       // Loop through all transfer to do ownership/balance checks
       for (let i = 0; i < transfersWithRecipients[0].items.length; i++) {
         // Get Itemtype, token, amount, identifier
-        const { itemType, amount, identifier } =
-          transfersWithRecipients[0].items[i];
+        const { itemType, amount, identifier } = transfersWithRecipients[0].items[i];
         const token = contracts[i];
 
         switch (itemType) {
           case 1: // ERC20
             // Check balance
-            expect(
-              await (token as typeof erc20Contracts[0]).balanceOf(
-                sender.address
-              )
-            ).to.equal(0);
-            expect(
-              await (token as typeof erc20Contracts[0]).balanceOf(
-                recipient.address
-              )
-            ).to.equal(amount);
+            expect(await (token as typeof erc20Contracts[0]).balanceOf(sender.address)).to.equal(0);
+            expect(await (token as typeof erc20Contracts[0]).balanceOf(recipient.address)).to.equal(amount);
             break;
           case 2: // ERC721
           case 4: // ERC721_WITH_CRITERIA
-            expect(
-              await (token as typeof erc721Contracts[0]).ownerOf(identifier)
-            ).to.equal(recipient.address);
+            expect(await (token as typeof erc721Contracts[0]).ownerOf(identifier)).to.equal(recipient.address);
             break;
           case 3: // ERC1155
           case 5: // ERC1155_WITH_CRITERIA
             // Check balance
-            expect(await token.balanceOf(sender.address, identifier)).to.equal(
-              0
-            );
-            expect(
-              await token.balanceOf(recipient.address, identifier)
-            ).to.equal(amount);
+            expect(await token.balanceOf(sender.address, identifier)).to.equal(0);
+            expect(await token.balanceOf(recipient.address, identifier)).to.equal(amount);
             break;
         }
       }
@@ -338,9 +281,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       // Create numERC1155s amount of ERC1155 objects
       for (let i = 0; i < numERC1155s; i++) {
         // Deploy Contract
-        const { testERC1155: tempERC1155Contract } = await fixtureERC1155(
-          owner
-        );
+        const { testERC1155: tempERC1155Contract } = await fixtureERC1155(owner);
         // Create/Approve numERC1155s amount of ERC1155s
         const erc1155Transfer = await createTransferWithApproval(
           tempERC1155Contract,
@@ -354,42 +295,22 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         erc1155Transfers[i] = erc1155Transfer;
       }
 
-      const transfers = [
-        ...erc20Transfers,
-        ...erc721Transfers,
-        ...erc1155Transfers,
-      ];
+      const transfers = [...erc20Transfers, ...erc721Transfers, ...erc1155Transfers];
 
       const transfersWithRecipients = [];
 
-      transfersWithRecipients[0] = createTransferWithRecipient(
-        transfers,
-        recipient.address,
-        true
-      );
+      transfersWithRecipients[0] = createTransferWithRecipient(transfers, recipient.address, true);
 
       // Sending the bulk transfers with no conduit reverts
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(
-            transfersWithRecipients,
-            ethers.utils.formatBytes32String("")
-          )
-      )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfersWithRecipients, ethers.utils.formatBytes32String("")))
         .to.be.revertedWithCustomError(tempTransferHelper, "InvalidConduit")
         .withArgs(ethers.constants.HashZero, ethers.constants.AddressZero);
     });
 
     it("Cannot execute ERC721 transfers to a contract recipient without a conduit", async () => {
       // Deploy recipient contract
-      const erc721RecipientFactory = await ethers.getContractFactory(
-        "ERC721ReceiverMock"
-      );
-      const erc721Recipient = await erc721RecipientFactory.deploy(
-        Buffer.from("150b7a02", "hex"),
-        0
-      );
+      const erc721RecipientFactory = await ethers.getContractFactory("ERC721ReceiverMock");
+      const erc721Recipient = await erc721RecipientFactory.deploy(Buffer.from("150b7a02", "hex"), 0);
 
       const erc721Contracts = [];
       const erc721Transfers = [];
@@ -413,21 +334,10 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       const transfersWithRecipients = [];
 
-      transfersWithRecipients[0] = createTransferWithRecipient(
-        erc721Transfers,
-        erc721Recipient.address,
-        true
-      );
+      transfersWithRecipients[0] = createTransferWithRecipient(erc721Transfers, erc721Recipient.address, true);
 
       // Sending the bulk transfers with no conduit reverts
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(
-            transfersWithRecipients,
-            ethers.utils.formatBytes32String("")
-          )
-      )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfersWithRecipients, ethers.utils.formatBytes32String("")))
         .to.be.revertedWithCustomError(tempTransferHelper, "InvalidConduit")
         .withArgs(ethers.constants.HashZero, ethers.constants.AddressZero);
     });
@@ -454,11 +364,10 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(ethTransfers, tempConduitKey)
-      ).to.be.revertedWithCustomError(tempTransferHelper, "InvalidItemType");
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(ethTransfers, tempConduitKey)).to.be.revertedWithCustomError(
+        tempTransferHelper,
+        "InvalidItemType"
+      );
     });
 
     it("Reverts on invalid ERC20 identifier via conduit", async () => {
@@ -482,11 +391,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc20Transfers, tempConduitKey)
-      ).to.be.revertedWithCustomError(
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc20Transfers, tempConduitKey)).to.be.revertedWithCustomError(
         tempTransferHelper,
         "InvalidERC20Identifier"
       );
@@ -516,15 +421,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc721Transfers, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "InvalidERC721TransferAmount"
-        )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc721Transfers, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "InvalidERC721TransferAmount")
         .withArgs(10);
     });
 
@@ -552,22 +450,13 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc721Transfers, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ERC721ReceiverErrorRevertBytes"
-        )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc721Transfers, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ERC721ReceiverErrorRevertBytes")
         .withArgs("0x", tempERC721Contract.address, sender.address, 1);
     });
 
     it("Reverts on invalid function selector", async () => {
-      const invalidRecipientFactory = await ethers.getContractFactory(
-        "InvalidERC721Recipient"
-      );
+      const invalidRecipientFactory = await ethers.getContractFactory("InvalidERC721Recipient");
       const invalidRecipient = await invalidRecipientFactory.deploy();
 
       const { testERC721: tempERC721Contract } = await fixtureERC721(owner);
@@ -592,15 +481,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc721Transfers, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "InvalidERC721Recipient"
-        )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc721Transfers, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "InvalidERC721Recipient")
         .withArgs(invalidRecipient.address);
     });
 
@@ -642,11 +524,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, ethers.utils.formatBytes32String("0xabc"))
-      ).to.be.reverted;
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, ethers.utils.formatBytes32String("0xabc"))).to.be.reverted;
     });
 
     it("Reverts on error in ERC721 receiver", async () => {
@@ -656,13 +534,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       const { testERC20: tempERC20Contract } = await fixtureERC20(owner);
 
       // Deploy mock ERC721 receiver
-      const mockERC721ReceiverFactory = await ethers.getContractFactory(
-        "ERC721ReceiverMock"
-      );
-      const mockERC721Receiver = await mockERC721ReceiverFactory.deploy(
-        Buffer.from("abcd0000", "hex"),
-        1
-      );
+      const mockERC721ReceiverFactory = await ethers.getContractFactory("ERC721ReceiverMock");
+      const mockERC721Receiver = await mockERC721ReceiverFactory.deploy(Buffer.from("abcd0000", "hex"), 1);
 
       const transfers = [
         {
@@ -696,21 +569,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ERC721ReceiverErrorRevertString"
-        )
-        .withArgs(
-          "ERC721ReceiverMock: reverting",
-          mockERC721Receiver.address,
-          sender.address,
-          1
-        );
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ERC721ReceiverErrorRevertString")
+        .withArgs("ERC721ReceiverMock: reverting", mockERC721Receiver.address, sender.address, 1);
     });
 
     it("Reverts on error in ERC721 receiver via conduit", async () => {
@@ -720,13 +581,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       const { testERC20: tempERC20Contract } = await fixtureERC20(owner);
 
       // Deploy mock ERC721 receiver
-      const mockERC721ReceiverFactory = await ethers.getContractFactory(
-        "ERC721ReceiverMock"
-      );
-      const mockERC721Receiver = await mockERC721ReceiverFactory.deploy(
-        Buffer.from("abcd0000", "hex"),
-        1
-      );
+      const mockERC721ReceiverFactory = await ethers.getContractFactory("ERC721ReceiverMock");
+      const mockERC721Receiver = await mockERC721ReceiverFactory.deploy(Buffer.from("abcd0000", "hex"), 1);
 
       const transfers = [
         {
@@ -760,21 +616,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ERC721ReceiverErrorRevertString"
-        )
-        .withArgs(
-          "ERC721ReceiverMock: reverting",
-          mockERC721Receiver.address,
-          sender.address,
-          1
-        );
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ERC721ReceiverErrorRevertString")
+        .withArgs("ERC721ReceiverMock: reverting", mockERC721Receiver.address, sender.address, 1);
     });
 
     it("Reverts with custom error in conduit", async () => {
@@ -816,11 +660,10 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, tempConduitKey)
-      ).to.be.revertedWithCustomError(tempTransferHelper, "InvalidItemType");
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey)).to.be.revertedWithCustomError(
+        tempTransferHelper,
+        "InvalidItemType"
+      );
     });
 
     it("Reverts with bubbled up string error from call to conduit", async () => {
@@ -863,20 +706,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ConduitErrorRevertString"
-        )
-        .withArgs(
-          "WRONG_FROM",
-          tempConduitKey.toLowerCase(),
-          tempConduit.address
-        );
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ConduitErrorRevertString")
+        .withArgs("WRONG_FROM", tempConduitKey.toLowerCase(), tempConduit.address);
     });
 
     it("Reverts when no revert string is returned from call to conduit", async () => {
@@ -885,33 +717,21 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       await tempERC1155Contract.connect(owner).mint(sender.address, 0, 100);
 
-      const mockConduitControllerFactory = await ethers.getContractFactory(
-        "ConduitControllerMock"
-      );
+      const mockConduitControllerFactory = await ethers.getContractFactory("ConduitControllerMock");
       const mockConduitController = await mockConduitControllerFactory.deploy(
         1 // ConduitMockRevertNoReason
       );
 
-      const mockTransferHelperFactory = await ethers.getContractFactory(
-        "TransferHelper"
-      );
-      const mockTransferHelper = await mockTransferHelperFactory.deploy(
-        mockConduitController.address
-      );
+      const mockTransferHelperFactory = await ethers.getContractFactory("TransferHelper");
+      const mockTransferHelper = await mockTransferHelperFactory.deploy(mockConduitController.address);
       const mockConduitKey = owner.address + randomHex(12).slice(2);
 
       // Deploy the mock conduit through the mock conduit controller
-      await mockConduitController
-        .connect(owner)
-        .createConduit(mockConduitKey, owner.address);
+      await mockConduitController.connect(owner).createConduit(mockConduitKey, owner.address);
 
-      const mockConduitAddress = (
-        await mockConduitController.getConduit(mockConduitKey)
-      )[0];
+      const mockConduitAddress = (await mockConduitController.getConduit(mockConduitKey))[0];
 
-      await tempERC1155Contract
-        .connect(sender)
-        .setApprovalForAll(mockConduitAddress, true);
+      await tempERC1155Contract.connect(sender).setApprovalForAll(mockConduitAddress, true);
 
       const transfers = [
         {
@@ -946,23 +766,14 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        mockTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, mockConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ConduitErrorRevertBytes"
-        )
+      await expect(mockTransferHelper.connect(sender).bulkTransfer(transfers, mockConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ConduitErrorRevertBytes")
         .withArgs("0x", mockConduitKey.toLowerCase(), mockConduitAddress);
     });
 
     it("Reverts with bubbled up panic error from call to conduit", async () => {
       // Deploy mock ERC20
-      const mockERC20PanicFactory = await ethers.getContractFactory(
-        "TestERC20Panic"
-      );
+      const mockERC20PanicFactory = await ethers.getContractFactory("TestERC20Panic");
       const mockERC20Panic = await mockERC20PanicFactory.deploy();
 
       const transfers = [
@@ -986,29 +797,13 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      const panicError =
-        "0x4e487b710000000000000000000000000000000000000000000000000000000000000012";
+      const panicError = "0x4e487b710000000000000000000000000000000000000000000000000000000000000012";
       if (!process.env.REFERENCE) {
-        await expect(
-          tempTransferHelper
-            .connect(sender)
-            .bulkTransfer(transfers, tempConduitKey)
-        )
-          .to.be.revertedWithCustomError(
-            tempTransferHelper,
-            "ConduitErrorRevertBytes"
-          )
-          .withArgs(
-            panicError,
-            tempConduitKey.toLowerCase(),
-            tempConduit.address
-          );
+        await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey))
+          .to.be.revertedWithCustomError(tempTransferHelper, "ConduitErrorRevertBytes")
+          .withArgs(panicError, tempConduitKey.toLowerCase(), tempConduit.address);
       } else {
-        await expect(
-          tempTransferHelper
-            .connect(sender)
-            .bulkTransfer(transfers, tempConduitKey)
-        ).to.be.reverted;
+        await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey)).to.be.reverted;
       }
     });
 
@@ -1018,29 +813,19 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       await tempERC20Contract.connect(owner).mint(sender.address, 100);
 
-      const mockConduitControllerFactory = await ethers.getContractFactory(
-        "ConduitControllerMock"
-      );
+      const mockConduitControllerFactory = await ethers.getContractFactory("ConduitControllerMock");
       const mockConduitController = await mockConduitControllerFactory.deploy(
         2 // ConduitMockInvalidMagic
       );
 
-      const mockTransferHelperFactory = await ethers.getContractFactory(
-        "TransferHelper"
-      );
-      const mockTransferHelper = await mockTransferHelperFactory.deploy(
-        mockConduitController.address
-      );
+      const mockTransferHelperFactory = await ethers.getContractFactory("TransferHelper");
+      const mockTransferHelper = await mockTransferHelperFactory.deploy(mockConduitController.address);
       const mockConduitKey = owner.address + randomHex(12).slice(2);
 
       // Deploy the mock conduit through the mock conduit controller
-      await mockConduitController
-        .connect(owner)
-        .createConduit(mockConduitKey, owner.address);
+      await mockConduitController.connect(owner).createConduit(mockConduitKey, owner.address);
 
-      const mockConduitAddress = (
-        await mockConduitController.getConduit(mockConduitKey)
-      )[0];
+      const mockConduitAddress = (await mockConduitController.getConduit(mockConduitKey))[0];
 
       await tempERC20Contract.connect(sender).approve(mockConduitAddress, 100);
 
@@ -1065,11 +850,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        mockTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, mockConduitKey)
-      )
+      await expect(mockTransferHelper.connect(sender).bulkTransfer(transfers, mockConduitKey))
         .to.be.revertedWithCustomError(mockTransferHelper, "InvalidConduit")
         .withArgs(mockConduitKey.toLowerCase(), mockConduitAddress);
     });
@@ -1080,29 +861,19 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       await tempERC20Contract.connect(owner).mint(sender.address, 100);
 
-      const mockConduitControllerFactory = await ethers.getContractFactory(
-        "ConduitControllerMock"
-      );
+      const mockConduitControllerFactory = await ethers.getContractFactory("ConduitControllerMock");
       const mockConduitController = await mockConduitControllerFactory.deploy(
         3 // ConduitMockRevertBytes
       );
 
-      const mockTransferHelperFactory = await ethers.getContractFactory(
-        "TransferHelper"
-      );
-      const mockTransferHelper = await mockTransferHelperFactory.deploy(
-        mockConduitController.address
-      );
+      const mockTransferHelperFactory = await ethers.getContractFactory("TransferHelper");
+      const mockTransferHelper = await mockTransferHelperFactory.deploy(mockConduitController.address);
       const mockConduitKey = owner.address + randomHex(12).slice(2);
 
       // Deploy the mock conduit through the mock conduit controller
-      await mockConduitController
-        .connect(owner)
-        .createConduit(mockConduitKey, owner.address);
+      await mockConduitController.connect(owner).createConduit(mockConduitKey, owner.address);
 
-      const mockConduitAddress = (
-        await mockConduitController.getConduit(mockConduitKey)
-      )[0];
+      const mockConduitAddress = (await mockConduitController.getConduit(mockConduitKey))[0];
       await tempERC20Contract.connect(sender).approve(mockConduitAddress, 100);
 
       const transfers = [
@@ -1128,20 +899,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       const customErrorSelector = ethers.utils.id("CustomError()").slice(0, 10);
 
-      await expect(
-        mockTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, mockConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          mockTransferHelper,
-          "ConduitErrorRevertBytes"
-        )
-        .withArgs(
-          customErrorSelector,
-          mockConduitKey.toLowerCase(),
-          mockConduitAddress
-        );
+      await expect(mockTransferHelper.connect(sender).bulkTransfer(transfers, mockConduitKey))
+        .to.be.revertedWithCustomError(mockTransferHelper, "ConduitErrorRevertBytes")
+        .withArgs(customErrorSelector, mockConduitKey.toLowerCase(), mockConduitAddress);
     });
 
     it("Reverts when recipient is the null address (with conduit)", async () => {
@@ -1183,11 +943,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, tempConduitKey)
-      ).to.be.revertedWithCustomError(
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey)).to.be.revertedWithCustomError(
         tempTransferHelper,
         "RecipientCannotBeZeroAddress"
       );
@@ -1212,12 +968,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       const erc1155Contracts = [];
       const erc1155Transfers = [];
 
-      const recipients = [
-        recipient.address,
-        alice.address,
-        bob.address,
-        cal.address,
-      ];
+      const recipients = [recipient.address, alice.address, bob.address, cal.address];
 
       const transfersWithRecipients = [];
       const allContracts = [];
@@ -1263,9 +1014,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         // Create numERC1155s amount of ERC1155 objects
         for (let i = 0; i < numERC1155s; i++) {
           // Deploy Contract
-          const { testERC1155: tempERC1155Contract } = await fixtureERC1155(
-            owner
-          );
+          const { testERC1155: tempERC1155Contract } = await fixtureERC1155(owner);
           // Create/Approve numERC1155s amount of ERC1155s
           const erc1155Transfer = await createTransferWithApproval(
             tempERC1155Contract,
@@ -1280,29 +1029,15 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           erc1155Transfers[i] = erc1155Transfer;
         }
 
-        const transfers = [
-          ...erc20Transfers,
-          ...erc721Transfers,
-          ...erc1155Transfers,
-        ];
+        const transfers = [...erc20Transfers, ...erc721Transfers, ...erc1155Transfers];
 
-        allContracts.push(
-          ...erc20Contracts,
-          ...erc721Contracts,
-          ...erc1155Contracts
-        );
+        allContracts.push(...erc20Contracts, ...erc721Contracts, ...erc1155Contracts);
 
-        transfersWithRecipients[j] = createTransferWithRecipient(
-          transfers,
-          transferRecipient,
-          true
-        );
+        transfersWithRecipients[j] = createTransferWithRecipient(transfers, transferRecipient, true);
       }
 
       // Send the bulk transfers
-      await tempTransferHelper
-        .connect(sender)
-        .bulkTransfer(transfersWithRecipients, tempConduitKey);
+      await tempTransferHelper.connect(sender).bulkTransfer(transfersWithRecipients, tempConduitKey);
 
       let contractsStartingIndex = 0;
       // Loop through all transfer to do ownership/balance checks
@@ -1317,35 +1052,18 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           switch (itemType) {
             case 1: // ERC20
               // Check balance
-              expect(
-                await (token as typeof erc20Contracts[0]).balanceOf(
-                  sender.address
-                )
-              ).to.equal(0);
-              expect(
-                await (token as typeof erc20Contracts[0]).balanceOf(
-                  transfersWithRecipients[i].recipient
-                )
-              ).to.equal(amount);
+              expect(await (token as typeof erc20Contracts[0]).balanceOf(sender.address)).to.equal(0);
+              expect(await (token as typeof erc20Contracts[0]).balanceOf(transfersWithRecipients[i].recipient)).to.equal(amount);
               break;
             case 2: // ERC721
             case 4: // ERC721_WITH_CRITERIA
-              expect(
-                await (token as typeof erc721Contracts[0]).ownerOf(identifier)
-              ).to.equal(transfersWithRecipients[i].recipient);
+              expect(await (token as typeof erc721Contracts[0]).ownerOf(identifier)).to.equal(transfersWithRecipients[i].recipient);
               break;
             case 3: // ERC1155
             case 5: // ERC1155_WITH_CRITERIA
               // Check balance
-              expect(
-                await token.balanceOf(sender.address, identifier)
-              ).to.equal(0);
-              expect(
-                await token.balanceOf(
-                  transfersWithRecipients[i].recipient,
-                  identifier
-                )
-              ).to.equal(amount);
+              expect(await token.balanceOf(sender.address, identifier)).to.equal(0);
+              expect(await token.balanceOf(transfersWithRecipients[i].recipient, identifier)).to.equal(amount);
               break;
           }
           contractsStartingIndex++;
@@ -1371,12 +1089,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       const erc1155Contracts = [];
       const erc1155Transfers = [];
 
-      const recipients = [
-        recipient.address,
-        alice.address,
-        bob.address,
-        cal.address,
-      ];
+      const recipients = [recipient.address, alice.address, bob.address, cal.address];
 
       const transfersWithRecipientsNoConduit = [];
       const allContracts = [];
@@ -1422,9 +1135,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         // Create numERC1155s amount of ERC1155 objects
         for (let i = 0; i < numERC1155s; i++) {
           // Deploy Contract
-          const { testERC1155: tempERC1155Contract } = await fixtureERC1155(
-            owner
-          );
+          const { testERC1155: tempERC1155Contract } = await fixtureERC1155(owner);
           // Create/Approve numERC1155s amount of ERC1155s
           const erc1155Transfer = await createTransferWithApproval(
             tempERC1155Contract,
@@ -1439,75 +1150,33 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           erc1155Transfers[i] = erc1155Transfer;
         }
 
-        const transfers = [
-          ...erc20Transfers,
-          ...erc721Transfers,
-          ...erc1155Transfers,
-        ];
+        const transfers = [...erc20Transfers, ...erc721Transfers, ...erc1155Transfers];
 
-        allContracts.push(
-          ...erc20Contracts,
-          ...erc721Contracts,
-          ...erc1155Contracts
-        );
+        allContracts.push(...erc20Contracts, ...erc721Contracts, ...erc1155Contracts);
 
-        transfersWithRecipientsNoConduit[j] = createTransferWithRecipient(
-          transfers,
-          transferRecipient,
-          true
-        );
+        transfersWithRecipientsNoConduit[j] = createTransferWithRecipient(transfers, transferRecipient, true);
       }
 
       // Sending the bulk transfers with no conduit reverts
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(
-            transfersWithRecipientsNoConduit,
-            ethers.utils.formatBytes32String("")
-          )
-      )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfersWithRecipientsNoConduit, ethers.utils.formatBytes32String("")))
         .to.be.revertedWithCustomError(tempTransferHelper, "InvalidConduit")
         .withArgs(ethers.constants.HashZero, ethers.constants.AddressZero);
     });
 
     it("Cannot execute ERC721 transfers to multiple contract recipients without a conduit", async () => {
       // Deploy recipient contract
-      const erc721RecipientFactory = await ethers.getContractFactory(
-        "ERC721ReceiverMock"
-      );
-      const erc721RecipientOne = await erc721RecipientFactory.deploy(
-        Buffer.from("150b7a02", "hex"),
-        0
-      );
+      const erc721RecipientFactory = await ethers.getContractFactory("ERC721ReceiverMock");
+      const erc721RecipientOne = await erc721RecipientFactory.deploy(Buffer.from("150b7a02", "hex"), 0);
 
-      const erc721RecipientTwo = await erc721RecipientFactory.deploy(
-        Buffer.from("150b7a02", "hex"),
-        0
-      );
+      const erc721RecipientTwo = await erc721RecipientFactory.deploy(Buffer.from("150b7a02", "hex"), 0);
 
-      const erc721RecipientThree = await erc721RecipientFactory.deploy(
-        Buffer.from("150b7a02", "hex"),
-        0
-      );
+      const erc721RecipientThree = await erc721RecipientFactory.deploy(Buffer.from("150b7a02", "hex"), 0);
 
-      const erc721RecipientFour = await erc721RecipientFactory.deploy(
-        Buffer.from("150b7a02", "hex"),
-        0
-      );
+      const erc721RecipientFour = await erc721RecipientFactory.deploy(Buffer.from("150b7a02", "hex"), 0);
 
-      const erc721RecipientFive = await erc721RecipientFactory.deploy(
-        Buffer.from("150b7a02", "hex"),
-        0
-      );
+      const erc721RecipientFive = await erc721RecipientFactory.deploy(Buffer.from("150b7a02", "hex"), 0);
 
-      const erc721Recipients = [
-        erc721RecipientOne,
-        erc721RecipientTwo,
-        erc721RecipientThree,
-        erc721RecipientFour,
-        erc721RecipientFive,
-      ];
+      const erc721Recipients = [erc721RecipientOne, erc721RecipientTwo, erc721RecipientThree, erc721RecipientFour, erc721RecipientFive];
 
       const numTransfers = 5;
       const transfersWithRecipients = [];
@@ -1535,24 +1204,13 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           erc721Contracts[j] = tempERC721Contract;
           erc721Items[j] = erc721Transfer;
         }
-        transfersWithRecipients[i] = createTransferWithRecipient(
-          erc721Items,
-          erc721Recipients[i].address,
-          true
-        );
+        transfersWithRecipients[i] = createTransferWithRecipient(erc721Items, erc721Recipients[i].address, true);
 
         allContracts.push(...erc721Contracts);
       }
 
       // Sending the bulk transfers with no conduit reverts
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(
-            transfersWithRecipients,
-            ethers.utils.formatBytes32String("")
-          )
-      )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfersWithRecipients, ethers.utils.formatBytes32String("")))
         .to.be.revertedWithCustomError(tempTransferHelper, "InvalidConduit")
         .withArgs(ethers.constants.HashZero, ethers.constants.AddressZero);
     });
@@ -1584,11 +1242,10 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(ethTransferHelperItems, tempConduitKey)
-      ).to.be.revertedWithCustomError(tempTransferHelper, "InvalidItemType");
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(ethTransferHelperItems, tempConduitKey)).to.be.revertedWithCustomError(
+        tempTransferHelper,
+        "InvalidItemType"
+      );
     });
 
     it("Reverts on invalid ERC20 identifier", async () => {
@@ -1619,11 +1276,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc20TransferHelperItems, tempConduitKey)
-      ).to.be.revertedWithCustomError(
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc20TransferHelperItems, tempConduitKey)).to.be.revertedWithCustomError(
         tempTransferHelper,
         "InvalidERC20Identifier"
       );
@@ -1660,15 +1313,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc721TransferHelperItems, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "InvalidERC721TransferAmount"
-        )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc721TransferHelperItems, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "InvalidERC721TransferAmount")
         .withArgs(10);
     });
 
@@ -1676,9 +1322,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       const { testERC721: tempERC721Contract } = await fixtureERC721(owner);
 
       // Will accept ERC721 transfers
-      const mockERC721ReceiverFactory = await ethers.getContractFactory(
-        "ERC721ReceiverMock"
-      );
+      const mockERC721ReceiverFactory = await ethers.getContractFactory("ERC721ReceiverMock");
       const erc721Receiver = await mockERC721ReceiverFactory.deploy(
         "0x150b7a02", // Magic value
         0
@@ -1702,9 +1346,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await tempTransferHelper
-        .connect(sender)
-        .bulkTransfer(erc721TransferHelperItems, tempConduitKey);
+      await tempTransferHelper.connect(sender).bulkTransfer(erc721TransferHelperItems, tempConduitKey);
     });
 
     it("Reverts on invalid ERC721 recipient", async () => {
@@ -1739,22 +1381,13 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc721TransferHelperItems, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ERC721ReceiverErrorRevertBytes"
-        )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc721TransferHelperItems, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ERC721ReceiverErrorRevertBytes")
         .withArgs("0x", tempERC721Contract.address, sender.address, 1);
     });
 
     it("Reverts on invalid function selector", async () => {
-      const invalidRecipientFactory = await ethers.getContractFactory(
-        "InvalidERC721Recipient"
-      );
+      const invalidRecipientFactory = await ethers.getContractFactory("InvalidERC721Recipient");
       const invalidRecipient = await invalidRecipientFactory.deploy();
       const invalidRecipientTwo = await invalidRecipientFactory.deploy();
 
@@ -1787,15 +1420,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(erc721TransferHelperItems, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "InvalidERC721Recipient"
-        )
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(erc721TransferHelperItems, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "InvalidERC721Recipient")
         .withArgs(invalidRecipient.address);
     });
 
@@ -1856,14 +1482,8 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(
-            transferHelperItems,
-            ethers.utils.formatBytes32String("0xabc")
-          )
-      ).to.be.reverted;
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transferHelperItems, ethers.utils.formatBytes32String("0xabc"))).to.be
+        .reverted;
     });
 
     it("Reverts on error in ERC721 receiver", async () => {
@@ -1873,25 +1493,11 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
       const { testERC20: tempERC20Contract } = await fixtureERC20(owner);
 
       // Deploy mock ERC721 receiver
-      const mockERC721ReceiverFactory = await ethers.getContractFactory(
-        "ERC721ReceiverMock"
-      );
-      const mockERC721ReceiverOne = await mockERC721ReceiverFactory.deploy(
-        Buffer.from("abcd0000", "hex"),
-        1
-      );
-      const mockERC721ReceiverTwo = await mockERC721ReceiverFactory.deploy(
-        Buffer.from("abcd6969", "hex"),
-        1
-      );
-      const mockERC721ReceiverThree = await mockERC721ReceiverFactory.deploy(
-        Buffer.from("42069abc", "hex"),
-        1
-      );
-      const mockERC721ReceiverFour = await mockERC721ReceiverFactory.deploy(
-        Buffer.from("abc42069", "hex"),
-        1
-      );
+      const mockERC721ReceiverFactory = await ethers.getContractFactory("ERC721ReceiverMock");
+      const mockERC721ReceiverOne = await mockERC721ReceiverFactory.deploy(Buffer.from("abcd0000", "hex"), 1);
+      const mockERC721ReceiverTwo = await mockERC721ReceiverFactory.deploy(Buffer.from("abcd6969", "hex"), 1);
+      const mockERC721ReceiverThree = await mockERC721ReceiverFactory.deploy(Buffer.from("42069abc", "hex"), 1);
+      const mockERC721ReceiverFour = await mockERC721ReceiverFactory.deploy(Buffer.from("abc42069", "hex"), 1);
 
       const transferHelperItems = [
         {
@@ -1944,21 +1550,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transferHelperItems, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ERC721ReceiverErrorRevertString"
-        )
-        .withArgs(
-          "ERC721ReceiverMock: reverting",
-          mockERC721ReceiverOne.address,
-          sender.address,
-          1
-        );
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transferHelperItems, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ERC721ReceiverErrorRevertString")
+        .withArgs("ERC721ReceiverMock: reverting", mockERC721ReceiverOne.address, sender.address, 1);
     });
 
     it("Reverts with custom error in conduit", async () => {
@@ -2018,11 +1612,10 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transferHelperItems, tempConduitKey)
-      ).to.be.revertedWithCustomError(tempTransferHelper, "InvalidItemType");
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transferHelperItems, tempConduitKey)).to.be.revertedWithCustomError(
+        tempTransferHelper,
+        "InvalidItemType"
+      );
     });
 
     it("Reverts with bubbled up string error from call to conduit", async () => {
@@ -2083,20 +1676,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transferHelperItems, tempConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ConduitErrorRevertString"
-        )
-        .withArgs(
-          "WRONG_FROM",
-          tempConduitKey.toLowerCase(),
-          tempConduit.address
-        );
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transferHelperItems, tempConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ConduitErrorRevertString")
+        .withArgs("WRONG_FROM", tempConduitKey.toLowerCase(), tempConduit.address);
     });
 
     it("Reverts when no revert string is returned from call to conduit", async () => {
@@ -2105,33 +1687,21 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       await tempERC1155Contract.connect(owner).mint(sender.address, 0, 100);
 
-      const mockConduitControllerFactory = await ethers.getContractFactory(
-        "ConduitControllerMock"
-      );
+      const mockConduitControllerFactory = await ethers.getContractFactory("ConduitControllerMock");
       const mockConduitController = await mockConduitControllerFactory.deploy(
         1 // ConduitMockRevertNoReason
       );
 
-      const mockTransferHelperFactory = await ethers.getContractFactory(
-        "TransferHelper"
-      );
-      const mockTransferHelper = await mockTransferHelperFactory.deploy(
-        mockConduitController.address
-      );
+      const mockTransferHelperFactory = await ethers.getContractFactory("TransferHelper");
+      const mockTransferHelper = await mockTransferHelperFactory.deploy(mockConduitController.address);
       const mockConduitKey = owner.address + randomHex(12).slice(2);
 
       // Deploy the mock conduit through the mock conduit controller
-      await mockConduitController
-        .connect(owner)
-        .createConduit(mockConduitKey, owner.address);
+      await mockConduitController.connect(owner).createConduit(mockConduitKey, owner.address);
 
-      const mockConduitAddress = (
-        await mockConduitController.getConduit(mockConduitKey)
-      )[0];
+      const mockConduitAddress = (await mockConduitController.getConduit(mockConduitKey))[0];
 
-      await tempERC1155Contract
-        .connect(sender)
-        .setApprovalForAll(mockConduitAddress, true);
+      await tempERC1155Contract.connect(sender).setApprovalForAll(mockConduitAddress, true);
 
       const transfers = [
         {
@@ -2196,23 +1766,14 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        mockTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, mockConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          tempTransferHelper,
-          "ConduitErrorRevertBytes"
-        )
+      await expect(mockTransferHelper.connect(sender).bulkTransfer(transfers, mockConduitKey))
+        .to.be.revertedWithCustomError(tempTransferHelper, "ConduitErrorRevertBytes")
         .withArgs("0x", mockConduitKey.toLowerCase(), mockConduitAddress);
     });
 
     it("Reverts with bubbled up panic error from call to conduit", async () => {
       // Deploy mock ERC20
-      const mockERC20PanicFactory = await ethers.getContractFactory(
-        "TestERC20Panic"
-      );
+      const mockERC20PanicFactory = await ethers.getContractFactory("TestERC20Panic");
       const mockERC20Panic = await mockERC20PanicFactory.deploy();
 
       const transfers = [
@@ -2254,30 +1815,14 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      const panicError =
-        "0x4e487b710000000000000000000000000000000000000000000000000000000000000012";
+      const panicError = "0x4e487b710000000000000000000000000000000000000000000000000000000000000012";
 
       if (!process.env.REFERENCE) {
-        await expect(
-          tempTransferHelper
-            .connect(sender)
-            .bulkTransfer(transfers, tempConduitKey)
-        )
-          .to.be.revertedWithCustomError(
-            tempTransferHelper,
-            "ConduitErrorRevertBytes"
-          )
-          .withArgs(
-            panicError,
-            tempConduitKey.toLowerCase(),
-            tempConduit.address
-          );
+        await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey))
+          .to.be.revertedWithCustomError(tempTransferHelper, "ConduitErrorRevertBytes")
+          .withArgs(panicError, tempConduitKey.toLowerCase(), tempConduit.address);
       } else {
-        await expect(
-          tempTransferHelper
-            .connect(sender)
-            .bulkTransfer(transfers, tempConduitKey)
-        ).to.be.reverted;
+        await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey)).to.be.reverted;
       }
     });
 
@@ -2287,29 +1832,19 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       await tempERC20Contract.connect(owner).mint(sender.address, 100);
 
-      const mockConduitControllerFactory = await ethers.getContractFactory(
-        "ConduitControllerMock"
-      );
+      const mockConduitControllerFactory = await ethers.getContractFactory("ConduitControllerMock");
       const mockConduitController = await mockConduitControllerFactory.deploy(
         2 // ConduitMockInvalidMagic
       );
 
-      const mockTransferHelperFactory = await ethers.getContractFactory(
-        "TransferHelper"
-      );
-      const mockTransferHelper = await mockTransferHelperFactory.deploy(
-        mockConduitController.address
-      );
+      const mockTransferHelperFactory = await ethers.getContractFactory("TransferHelper");
+      const mockTransferHelper = await mockTransferHelperFactory.deploy(mockConduitController.address);
       const mockConduitKey = owner.address + randomHex(12).slice(2);
 
       // Deploy the mock conduit through the mock conduit controller
-      await mockConduitController
-        .connect(owner)
-        .createConduit(mockConduitKey, owner.address);
+      await mockConduitController.connect(owner).createConduit(mockConduitKey, owner.address);
 
-      const mockConduitAddress = (
-        await mockConduitController.getConduit(mockConduitKey)
-      )[0];
+      const mockConduitAddress = (await mockConduitController.getConduit(mockConduitKey))[0];
 
       await tempERC20Contract.connect(sender).approve(mockConduitAddress, 100);
 
@@ -2352,11 +1887,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
         },
       ];
 
-      await expect(
-        mockTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, mockConduitKey)
-      )
+      await expect(mockTransferHelper.connect(sender).bulkTransfer(transfers, mockConduitKey))
         .to.be.revertedWithCustomError(mockTransferHelper, "InvalidConduit")
         .withArgs(mockConduitKey.toLowerCase(), mockConduitAddress);
     });
@@ -2367,29 +1898,19 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       await tempERC20Contract.connect(owner).mint(sender.address, 100);
 
-      const mockConduitControllerFactory = await ethers.getContractFactory(
-        "ConduitControllerMock"
-      );
+      const mockConduitControllerFactory = await ethers.getContractFactory("ConduitControllerMock");
       const mockConduitController = await mockConduitControllerFactory.deploy(
         3 // ConduitMockRevertBytes
       );
 
-      const mockTransferHelperFactory = await ethers.getContractFactory(
-        "TransferHelper"
-      );
-      const mockTransferHelper = await mockTransferHelperFactory.deploy(
-        mockConduitController.address
-      );
+      const mockTransferHelperFactory = await ethers.getContractFactory("TransferHelper");
+      const mockTransferHelper = await mockTransferHelperFactory.deploy(mockConduitController.address);
       const mockConduitKey = owner.address + randomHex(12).slice(2);
 
       // Deploy the mock conduit through the mock conduit controller
-      await mockConduitController
-        .connect(owner)
-        .createConduit(mockConduitKey, owner.address);
+      await mockConduitController.connect(owner).createConduit(mockConduitKey, owner.address);
 
-      const mockConduitAddress = (
-        await mockConduitController.getConduit(mockConduitKey)
-      )[0];
+      const mockConduitAddress = (await mockConduitController.getConduit(mockConduitKey))[0];
       await tempERC20Contract.connect(sender).approve(mockConduitAddress, 100);
 
       const transfers = [
@@ -2451,20 +1972,9 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
 
       const customErrorSelector = ethers.utils.id("CustomError()").slice(0, 10);
 
-      await expect(
-        mockTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, mockConduitKey)
-      )
-        .to.be.revertedWithCustomError(
-          mockTransferHelper,
-          "ConduitErrorRevertBytes"
-        )
-        .withArgs(
-          customErrorSelector,
-          mockConduitKey.toLowerCase(),
-          mockConduitAddress
-        );
+      await expect(mockTransferHelper.connect(sender).bulkTransfer(transfers, mockConduitKey))
+        .to.be.revertedWithCustomError(mockTransferHelper, "ConduitErrorRevertBytes")
+        .withArgs(customErrorSelector, mockConduitKey.toLowerCase(), mockConduitAddress);
     });
 
     it("Reverts when recipient is the null address (with conduit)", async () => {
@@ -2535,11 +2045,7 @@ describe(`TransferHelper tests (Seaport v${VERSION})`, function () {
           validateERC721Receiver: true,
         },
       ];
-      await expect(
-        tempTransferHelper
-          .connect(sender)
-          .bulkTransfer(transfers, tempConduitKey)
-      ).to.be.revertedWithCustomError(
+      await expect(tempTransferHelper.connect(sender).bulkTransfer(transfers, tempConduitKey)).to.be.revertedWithCustomError(
         tempTransferHelper,
         "RecipientCannotBeZeroAddress"
       );

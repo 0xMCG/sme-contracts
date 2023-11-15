@@ -2,30 +2,15 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
 
-import { merkleTree } from "./utils/criteria";
-import {
-  buildResolver,
-  getItemETH,
-  randomHex,
-  toAddress,
-  toBN,
-  toFulfillment,
-  toFulfillmentComponents,
-  toKey,
-} from "./utils/encoding";
+import { getItemETH, randomHex, toAddress } from "./utils/encoding";
 import { decodeEvents } from "./utils/events";
 import { faucet } from "./utils/faucet";
 import { seaportFixture } from "./utils/fixtures";
 import { VERSION } from "./utils/helpers";
 
-import type {
-  ConduitInterface,
-  ConsiderationInterface,
-  TestERC721,
-  TestZone,
-} from "../typechain-types";
-import type { SeaportFixtures } from "./utils/fixtures";
 import type { Contract, Wallet } from "ethers";
+import type { ConsiderationInterface, TestERC721, TestZone } from "../typechain-types";
+import type { SeaportFixtures } from "./utils/fixtures";
 
 const { parseEther } = ethers.utils;
 
@@ -105,33 +90,24 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
   }
 
   it("Only the deployer owner can create a zone", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
 
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     // deploy pausable zone from non-deployer owner
     const salt = randomHex();
-    await expect(
-      pausableZoneController.connect(seller).createZone(salt)
-    ).to.be.revertedWithCustomError(pausableZoneController, "CallerIsNotOwner");
+    await expect(pausableZoneController.connect(seller).createZone(salt)).to.be.revertedWithCustomError(
+      pausableZoneController,
+      "CallerIsNotOwner"
+    );
 
     // deploy pausable zone from owner
     await createZone(pausableZoneController);
   });
 
   it("Assign pauser and self destruct the zone", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     const zoneAddr = await createZone(pausableZoneController);
 
@@ -142,19 +118,17 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     const zone = await zoneContract.attach(zoneAddr);
 
     // Try to nuke the zone through the deployer before being assigned pauser
-    await expect(pausableZoneController.connect(buyer).pause(zoneAddr)).to.be
-      .reverted;
+    await expect(pausableZoneController.connect(buyer).pause(zoneAddr)).to.be.reverted;
 
     // Try to nuke the zone directly before being assigned pauser
     await expect(zone.connect(buyer).pause(zoneAddr)).to.be.reverted;
 
-    await expect(
-      pausableZoneController.connect(buyer).assignPauser(seller.address)
-    ).to.be.revertedWithCustomError(pausableZoneController, "CallerIsNotOwner");
+    await expect(pausableZoneController.connect(buyer).assignPauser(seller.address)).to.be.revertedWithCustomError(
+      pausableZoneController,
+      "CallerIsNotOwner"
+    );
 
-    await expect(
-      pausableZoneController.connect(owner).assignPauser(toAddress(0))
-    ).to.be.revertedWithCustomError(
+    await expect(pausableZoneController.connect(owner).assignPauser(toAddress(0))).to.be.revertedWithCustomError(
       pausableZoneController,
       "PauserCanNotBeSetAsZero"
     );
@@ -169,20 +143,13 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     const tx = await pausableZoneController.connect(buyer).pause(zoneAddr);
 
     // Check paused event was emitted
-    const pauseEvents = await decodeEvents(tx, [
-      { eventName: "Paused", contract: zoneContract as any },
-    ]);
+    const pauseEvents = await decodeEvents(tx, [{ eventName: "Paused", contract: zoneContract as any }]);
     expect(pauseEvents.length).to.equal(1);
   });
 
   it("Revert on deploying a zone with the same salt", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     const salt = randomHex();
 
@@ -190,38 +157,22 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     await pausableZoneController.createZone(salt);
 
     // Create zone with same salt
-    await expect(
-      pausableZoneController.createZone(salt)
-    ).to.be.revertedWithCustomError(
-      pausableZoneController,
-      "ZoneAlreadyExists"
-    );
+    await expect(pausableZoneController.createZone(salt)).to.be.revertedWithCustomError(pausableZoneController, "ZoneAlreadyExists");
   });
 
   it("Reverts if non-owner tries to self destruct the zone", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     const zoneAddr = await createZone(pausableZoneController);
 
     // non owner tries to use pausable deployer to nuke the zone, reverts
-    await expect(pausableZoneController.connect(buyer).pause(zoneAddr)).to.be
-      .reverted;
+    await expect(pausableZoneController.connect(buyer).pause(zoneAddr)).to.be.reverted;
   });
 
   it("Zone can cancel restricted orders", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     // deploy PausableZone
     const zoneAddr = await createZone(pausableZoneController);
@@ -244,26 +195,15 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     );
 
     await expect(
-      pausableZoneController
-        .connect(buyer)
-        .cancelOrders(zoneAddr, marketplaceContract.address, [orderComponents])
+      pausableZoneController.connect(buyer).cancelOrders(zoneAddr, marketplaceContract.address, [orderComponents])
     ).to.be.revertedWithCustomError(pausableZoneController, "CallerIsNotOwner");
 
-    await pausableZoneController.cancelOrders(
-      zoneAddr,
-      marketplaceContract.address,
-      [orderComponents]
-    );
+    await pausableZoneController.cancelOrders(zoneAddr, marketplaceContract.address, [orderComponents]);
   });
 
   it("Operator of zone can cancel restricted orders", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     // deploy PausableZone
     const zoneAddr = await createZone(pausableZoneController);
@@ -292,41 +232,24 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     );
 
     // Non operator address should not be allowed to operate the zone
-    await expect(
-      zone
-        .connect(seller)
-        .cancelOrders(marketplaceContract.address, [orderComponents])
-    ).to.be.reverted;
+    await expect(zone.connect(seller).cancelOrders(marketplaceContract.address, [orderComponents])).to.be.reverted;
 
     // Approve operator
-    await pausableZoneController
-      .connect(owner)
-      .assignOperator(zoneAddr, seller.address);
+    await pausableZoneController.connect(owner).assignOperator(zoneAddr, seller.address);
 
     // Now allowed to operate the zone
-    await zone
-      .connect(seller)
-      .cancelOrders(marketplaceContract.address, [orderComponents]);
+    await zone.connect(seller).cancelOrders(marketplaceContract.address, [orderComponents]);
 
     // Cannot assign operator to zero address
-    await expect(
-      pausableZoneController
-        .connect(owner)
-        .assignOperator(zoneAddr, toAddress(0))
-    ).to.be.revertedWithCustomError(
+    await expect(pausableZoneController.connect(owner).assignOperator(zoneAddr, toAddress(0))).to.be.revertedWithCustomError(
       pausableZoneController,
       "PauserCanNotBeSetAsZero"
     );
   });
 
   it("Reverts trying to assign operator as non-deployer", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     // deploy PausableZone
     const zoneAddr = await createZone(pausableZoneController);
@@ -338,25 +261,18 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     const zone = await zoneContract.attach(zoneAddr);
 
     // Try to approve operator without permission
-    await expect(
-      pausableZoneController
-        .connect(seller)
-        .assignOperator(zoneAddr, seller.address)
-    ).to.be.revertedWithCustomError(pausableZoneController, "CallerIsNotOwner");
+    await expect(pausableZoneController.connect(seller).assignOperator(zoneAddr, seller.address)).to.be.revertedWithCustomError(
+      pausableZoneController,
+      "CallerIsNotOwner"
+    );
 
     // Try to approve operator directly without permission
-    await expect(zone.connect(seller).assignOperator(seller.address)).to.be
-      .reverted;
+    await expect(zone.connect(seller).assignOperator(seller.address)).to.be.reverted;
   });
 
   it("Reverts if non-Zone tries to cancel restricted orders", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     await createZone(pausableZoneController);
 
@@ -377,18 +293,12 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
       2 // FULL_RESTRICTED
     );
 
-    await expect(marketplaceContract.connect(buyer).cancel([orderComponents]))
-      .to.be.reverted;
+    await expect(marketplaceContract.connect(buyer).cancel([orderComponents])).to.be.reverted;
   });
 
   it("Reverts if non-owner tries to use the zone to cancel restricted orders", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     const zoneAddr = await createZone(pausableZoneController);
 
@@ -410,60 +320,44 @@ describe(`Zone - PausableZone (Seaport v${VERSION})`, function () {
     );
 
     // buyer calls zone owner to cancel an order through the zone
-    await expect(
-      pausableZoneController
-        .connect(buyer)
-        .cancelOrders(zoneAddr, marketplaceContract.address, [orderComponents])
-    ).to.be.reverted;
+    await expect(pausableZoneController.connect(buyer).cancelOrders(zoneAddr, marketplaceContract.address, [orderComponents])).to.be
+      .reverted;
   });
 
   it("Lets the Zone Deployer owner transfer ownership via a two-stage process", async () => {
-    const pausableZoneControllerFactory = await ethers.getContractFactory(
-      "PausableZoneController",
-      owner
-    );
-    const pausableZoneController = await pausableZoneControllerFactory.deploy(
-      owner.address
-    );
+    const pausableZoneControllerFactory = await ethers.getContractFactory("PausableZoneController", owner);
+    const pausableZoneController = await pausableZoneControllerFactory.deploy(owner.address);
 
     await createZone(pausableZoneController);
 
-    await expect(
-      pausableZoneController.connect(buyer).transferOwnership(buyer.address)
-    ).to.be.revertedWithCustomError(pausableZoneController, "CallerIsNotOwner");
+    await expect(pausableZoneController.connect(buyer).transferOwnership(buyer.address)).to.be.revertedWithCustomError(
+      pausableZoneController,
+      "CallerIsNotOwner"
+    );
 
-    await expect(
-      pausableZoneController.connect(owner).transferOwnership(toAddress(0))
-    ).to.be.revertedWithCustomError(
+    await expect(pausableZoneController.connect(owner).transferOwnership(toAddress(0))).to.be.revertedWithCustomError(
       pausableZoneController,
       "OwnerCanNotBeSetAsZero"
     );
 
-    await expect(
-      pausableZoneController.connect(seller).cancelOwnershipTransfer()
-    ).to.be.revertedWithCustomError(pausableZoneController, "CallerIsNotOwner");
+    await expect(pausableZoneController.connect(seller).cancelOwnershipTransfer()).to.be.revertedWithCustomError(
+      pausableZoneController,
+      "CallerIsNotOwner"
+    );
 
-    await expect(
-      pausableZoneController.connect(buyer).acceptOwnership()
-    ).to.be.revertedWithCustomError(
+    await expect(pausableZoneController.connect(buyer).acceptOwnership()).to.be.revertedWithCustomError(
       pausableZoneController,
       "CallerIsNotPotentialOwner"
     );
 
     // just get any random address as the next potential owner.
-    await pausableZoneController
-      .connect(owner)
-      .transferOwnership(buyer.address);
+    await pausableZoneController.connect(owner).transferOwnership(buyer.address);
 
     // Check potential owner
-    expect(await pausableZoneController.potentialOwner()).to.equal(
-      buyer.address
-    );
+    expect(await pausableZoneController.potentialOwner()).to.equal(buyer.address);
 
     await pausableZoneController.connect(owner).cancelOwnershipTransfer();
-    await pausableZoneController
-      .connect(owner)
-      .transferOwnership(buyer.address);
+    await pausableZoneController.connect(owner).transferOwnership(buyer.address);
     await pausableZoneController.connect(buyer).acceptOwnership();
 
     expect(await pausableZoneController.owner()).to.equal(buyer.address);
