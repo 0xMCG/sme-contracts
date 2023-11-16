@@ -321,7 +321,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     const reqIdOrNumWords2 = 2;
     await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder2.order], [], [], reqIdOrNumWords);
     expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(2).toString());
-    
+
     await expect(
       marketplaceContract
         .connect(member)
@@ -356,7 +356,9 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     sellerOrder.order.numerator = 1; // partial 分子
     sellerOrder.order.denominator = 2; // partial 分母
     const reqIdOrNumWords = 2;
-    await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords);
+    await expect(
+      marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords)
+    ).to.changeTokenBalance(testERC20, marketplaceContract.address, parseEther("10"));
 
     await expect(
       marketplaceContract
