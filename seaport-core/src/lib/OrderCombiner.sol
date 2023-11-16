@@ -422,6 +422,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 // Validate it, update status, and determine fraction to fill.
                 (bytes32 orderHash, uint120 numerator, uint120 denominator) =
                     _validateOrderAndUpdateStatus(advancedOrder, revertOnInvalid);
+
                 // Do not track hash or adjust prices if order is not fulfilled.
                 if (numerator == 0) {
                     // Mark fill fraction as zero if the order is not fulfilled.
@@ -465,7 +466,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                     // Apply order fill fraction to offer item end amount.
                     // 这个numerator 和 denominator还是要看懂
                     uint256 endAmount = _getFraction(numerator, denominator, offerItem.endAmount);
-
+                    
                     // Reuse same fraction if start and end amounts are equal.
                     if (offerItem.startAmount == offerItem.endAmount) {
                         // Apply derived amount to both start and end amount.
@@ -477,7 +478,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
 
                     // Update amounts in memory to match the current amount.
                     // Note that the end amount is used to track spent amounts.
-                    offerItem.startAmount = offerItem.endAmount;
+                    offerItem.startAmount = endAmount;
                 }
                 // console.log("Finish one order");
             }
@@ -546,7 +547,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
 
                         // Retrieve remaining amount on consideration item.
                         uint256 unmetAmount = considerationItem.startAmount;
-
+                   
                         // Revert if the remaining amount is not zero.
                         if (unmetAmount != 0) {
                             returnBack = true;
@@ -749,7 +750,6 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
             advancedOrders.length,
             orderProbility
         );
-
         // Fulfill the orders using the supplied fulfillments and recipient.
         return _fulfillAdvancedOrdersWithRandom(advancedOrders, fulfillments, orderHashes);
     }
@@ -797,6 +797,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                         ++premiumIndex;
                     }
                 }
+
                 Execution memory execution = _aggregateAvailable(
                     advancedOrders,
                     Side.OFFER,
@@ -804,14 +805,15 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                     bytes32(0), // not used
                     recipent
                 );
+
                 // If the execution is filterable...
-                if (_isFilterableExecution(execution)) {
-                    // Increment total filtered executions.
-                    ++totalFilteredExecutions;
-                } else {
+                // if (_isFilterableExecution(execution)) {
+                //     // Increment total filtered executions.
+                //     ++totalFilteredExecutions;
+                // } else {
                     // Otherwise, assign the execution to the executions array.
                     executions[i - totalFilteredExecutions] = execution;
-                }
+                // }
             }
             // If some number of executions have been filtered...
             if (totalFilteredExecutions != 0) {
@@ -1009,13 +1011,13 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 );
                 // console.log("Built one execution");
                 // If the execution is filterable...
-                if (_isFilterableExecution(execution)) {
-                    // Increment total filtered executions.
-                    ++totalFilteredExecutions;
-                } else {
+                // if (_isFilterableExecution(execution)) {
+                //     // Increment total filtered executions.
+                //     ++totalFilteredExecutions;
+                // } else {
                     // Otherwise, assign the execution to the executions array.
                     executions[i - totalFilteredExecutions] = execution;
-                }
+                // }
                 // skip the following execution since it should fail
                 if (_isZeroExecution(execution)) {
                     totalFilteredExecutions += totalFulfillments - i - 1;
@@ -1039,7 +1041,6 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
             // Emit OrdersMatched event, providing an array of matched order hashes.
             _emitOrdersMatched(orderHashes);
         }
-
         // Return the executions array.
         return (executions, returnBack);
     }
