@@ -55,12 +55,12 @@ const VRFConfig: {
     keyHash:
       "0x83d1b6e3388bed3d76426974512bb0d270e9542a765cd667242ea26c0cc0b730",
   },
-  // arb: {
-  //   coor: "0x41034678D6C633D8a95c75e1138A360a28bA15d1",
-  //   subId: 36,
-  //   keyHash:
-  //     "0x08ba8f62ff6c40a58877a106147661db43bc58dabfb814793847a839aa03367f",
-  // },
+  arb: {
+    coor: "0x41034678D6C633D8a95c75e1138A360a28bA15d1",
+    subId: 126,
+    keyHash:
+      "0x72d2b016bb5b62912afea355ebf33b91319f828738b111b723b78696b9847b63",
+  },
 };
 
 async function main() {
@@ -93,10 +93,11 @@ async function main() {
     conduitControllerAddress
   );
   const conduitKey = `${owner.address}aaaaaaaaaaaaaaaaaaaaaaaa`;
+  json["ConduitKey"] = conduitKey;
   let conduit = await lcc.getConduit(conduitKey);
   if (!conduit.exists) {
     const tx = await lcc.createConduit(conduitKey, owner.address, {
-      gasLimit: 1000000,
+      gasLimit: 2000000,
     });
     await tx.wait(1);
     conduit = await lcc.getConduit(conduitKey);
@@ -121,7 +122,7 @@ async function main() {
   const seaport = await ethers.getContractAt("Seaport", seaportAddress);
   await seaport
     .addMember("0x28c73A60ccF8c66c14EbA8935984e616Df2926e3", {
-      gasLimit: 1000000,
+      gasLimit: 2000000,
     })
     .then((tx) => tx.wait(1));
   console.info("added members");
