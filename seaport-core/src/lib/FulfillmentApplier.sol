@@ -45,7 +45,7 @@ import {
     Panic_error_length,
     Panic_error_selector
 } from "seaport-types/src/lib/ConsiderationErrorConstants.sol";
-
+import "hardhat/console.sol";
 /**
  * @title FulfillmentApplier
  * @author 0age
@@ -77,7 +77,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
         FulfillmentComponent[] memory offerComponents,
         FulfillmentComponent[] memory considerationComponents,
         uint256 fulfillmentIndex
-    ) internal pure returns (Execution memory execution) {
+    ) internal view returns (Execution memory execution) {
         // Ensure 1+ of both offer and consideration components are supplied.
         if (offerComponents.length == 0 || considerationComponents.length == 0) {
             _revertOfferAndConsiderationRequiredOnFulfillment();
@@ -121,8 +121,8 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
             _revertMismatchedFulfillmentOfferAndConsiderationComponents(fulfillmentIndex);
         }
 
-        // 在这里进行修改 如果是match的话？
-
+        // console.log("ex:", execution.item.amount);
+        // console.log("condider:", considerationItem.amount);
         // If total consideration amount exceeds the offer amount...
         if (considerationItem.amount > execution.item.amount) {
             // Retrieve the first consideration component from the fulfillment.
@@ -267,7 +267,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
 
                 // Retrieve the order index using the fulfillment pointer.
                 let orderIndex := mload(mload(fulfillmentHeadPtr))
-
+                
                 // Ensure that the order index is not out of range.
                 if iszero(lt(orderIndex, mload(advancedOrders))) { throwInvalidFulfillmentComponentData() }
 

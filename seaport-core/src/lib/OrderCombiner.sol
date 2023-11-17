@@ -90,7 +90,6 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
         uint256 invalidNativeOfferItemErrorBuffer;
 
         // Use assembly to set the value for the second bit of the error buffer.
-        // 这里是个奇怪的地方 如果我随便改名字和参数 这里是不是不一样了
         assembly {
             /**
              * Use the 231st bit of the error buffer to indicate whether the
@@ -161,7 +160,6 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 }
 
                 // Otherwise, track the order hash in question.
-                // OneWordShift 0x5 所以是32位 正好是bytes32
                 assembly {
                     mstore(add(orderHashes, i), orderHash)
                 }
@@ -433,7 +431,6 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 }
 
                 // Otherwise, track the order hash in question.
-                // OneWordShift 0x5 所以是32位 正好是bytes32
                 assembly {
                     mstore(add(orderHashes, i), orderHash)
                 }
@@ -464,17 +461,16 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                     OfferItem memory offerItem = offer[j];
 
                     // Apply order fill fraction to offer item end amount.
-                    // 这个numerator 和 denominator还是要看懂
                     uint256 endAmount = _getFraction(numerator, denominator, offerItem.endAmount);
                     
                     // Reuse same fraction if start and end amounts are equal.
-                    if (offerItem.startAmount == offerItem.endAmount) {
-                        // Apply derived amount to both start and end amount.
-                        offerItem.startAmount = endAmount;
-                    } else {
-                        // Apply order fill fraction to offer item start amount.
-                        offerItem.startAmount = _getFraction(numerator, denominator, offerItem.startAmount);
-                    }
+                    // if (offerItem.startAmount == offerItem.endAmount) {
+                    //     // Apply derived amount to both start and end amount.
+                    //     offerItem.startAmount = endAmount;
+                    // } else {
+                    //     // Apply order fill fraction to offer item start amount.
+                    //     offerItem.startAmount = _getFraction(numerator, denominator, offerItem.startAmount);
+                    // }
 
                     // Update amounts in memory to match the current amount.
                     // Note that the end amount is used to track spent amounts.
@@ -1004,8 +1000,6 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 Fulfillment memory fulfillment = fulfillments[i];
 
                 // Derive the execution corresponding with the fulfillment.
-                // 这里是匹配的过程 可不可以修改这里？
-                // 看起来是直接修改上面是最好的 不修改下面
                 Execution memory execution = _applyFulfillment(
                     advancedOrders, fulfillment.offerComponents, fulfillment.considerationComponents, i
                 );
@@ -1021,6 +1015,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 // skip the following execution since it should fail
                 if (_isZeroExecution(execution)) {
                     totalFilteredExecutions += totalFulfillments - i - 1;
+                    // revert("Error on zero amount");
                     break;
                 }
             }
