@@ -7,8 +7,7 @@ import { faucet } from "./utils/faucet";
 import { seaportFixture } from "./utils/fixtures";
 import { VERSION } from "./utils/helpers";
 
-import { BigNumberish, type Wallet } from "ethers";
-import { formatEther } from "ethers/lib/utils";
+import { BigNumber, type Wallet } from "ethers";
 import type {
   ConduitControllerInterface,
   ConduitInterface,
@@ -82,384 +81,612 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     } = await seaportFixture(owner));
   });
 
-  let seller: Wallet;
-  let seller2: Wallet;
-  let buyer: Wallet;
-  let buyer2: Wallet;
+  let maker: Wallet;
+  let maker2: Wallet;
+  let taker: Wallet;
+  let taker2: Wallet;
   let member: Wallet;
+  let feeReciver: Wallet;
 
   let tempConduit: ConduitInterface;
 
   async function setupFixture() {
-    // Setup basic buyer/seller wallets with ETH
-    const seller = new ethers.Wallet(randomHex(32), provider);
-    const seller2 = new ethers.Wallet(randomHex(32), provider);
-    const buyer = new ethers.Wallet(randomHex(32), provider);
-    const buyer2 = new ethers.Wallet(randomHex(32), provider);
+    // Setup basic taker/maker wallets with ETH
+    const maker = new ethers.Wallet(randomHex(32), provider);
+    const maker2 = new ethers.Wallet(randomHex(32), provider);
+    const taker = new ethers.Wallet(randomHex(32), provider);
+    const taker2 = new ethers.Wallet(randomHex(32), provider);
     const member = new ethers.Wallet(randomHex(32), provider);
+    const feeReciver = new ethers.Wallet(randomHex(32), provider);
     await (marketplaceContract as unknown as Consideration).connect(owner).addMember(member.address);
     // Deploy a new conduit
     const tempConduit = await deployNewConduit(owner);
 
-    for (const wallet of [seller, seller2, buyer, buyer2, member]) {
+    for (const wallet of [maker, maker2, taker, taker2, member]) {
       await faucet(wallet.address, provider);
     }
 
-    return { seller, seller2, buyer, buyer2, member, tempConduit };
+    return { maker, maker2, taker, taker2, member, tempConduit, feeReciver };
   }
   const fufillments = [
-    {
-      offerComponents: [{ orderIndex: 0, itemIndex: 0 }],
-      considerationComponents: [{ orderIndex: 1, itemIndex: 0 }],
-    },
-    {
-      offerComponents: [{ orderIndex: 1, itemIndex: 0 }],
-      considerationComponents: [{ orderIndex: 0, itemIndex: 0 }],
-    },
+    { offerComponents: [{ orderIndex: 0, itemIndex: 0 }], considerationComponents: [{ orderIndex: 1, itemIndex: 0 }] },
+    { offerComponents: [{ orderIndex: 1, itemIndex: 0 }], considerationComponents: [{ orderIndex: 0, itemIndex: 0 }] },
+  ];
+  const fufillmentsFeeList = [
+    ...fufillments,
+    { offerComponents: [{ orderIndex: 1, itemIndex: 0 }], considerationComponents: [{ orderIndex: 0, itemIndex: 1 }] },
+  ];
+  const fufillmentsFeeBid = [
+    ...fufillments,
+    { offerComponents: [{ orderIndex: 0, itemIndex: 0 }], considerationComponents: [{ orderIndex: 1, itemIndex: 1 }] },
   ];
   beforeEach(async () => {
-    ({ seller, seller2, buyer, buyer2, member, tempConduit } = await loadFixture(setupFixture));
+    ({ maker, maker2, taker, taker2, member, tempConduit, feeReciver } = await loadFixture(setupFixture));
   });
 
-  async function log20Balance(name: string, address: string) {
-    console.info(`${name}:`, formatEther(await testERC20.balanceOf(address)));
-  }
-  async function log1155Balance(name: string, address: string, id: BigNumberish) {
-    console.info(`${name}:`, (await testERC1155.balanceOf(address, id)).toString());
-  }
   it("Full order match list", async () => {
-    // seller
-    const { nftId, amount } = await mint1155(seller);
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
-    const sellerOrder = await createOrder(
-      seller,
+    // maker
+    const { nftId, amount } = await mint1155(maker);
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), seller.address)],
+      [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
       0
     );
 
-    // buyer
-    await mintAndApproveERC20(buyer, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      buyer,
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("7"), parseEther("9.5"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, buyer.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
     const reqIdOrNumWords = 1;
     // backend
-    await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords);
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
 
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([sellerOrder.order, buyerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: sellerOrder.orderHash, numerator: 1, denominator: 2 },
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [seller.address, buyer.address], [parseEther("9"), parseEther("0.5")]);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq("1");
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("9"), parseEther("0.5")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("1");
   });
   it("Full order match list slef", async () => {
-    // seller
-    const { nftId, amount } = await mint1155(seller);
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
-    const sellerOrder = await createOrder(
-      seller,
+    // maker
+    const { nftId, amount } = await mint1155(maker);
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), seller.address)],
+      [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
       0
     );
 
-    // buyer
-    await mintAndApproveERC20(seller, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      seller,
+    // taker
+    await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("7"), parseEther("9.5"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, seller.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, maker.address)],
       0
     );
     const reqIdOrNumWords = 1;
-    const sellerErc20Balance = await testERC20.balanceOf(seller.address);
+    const makerErc20Balance = await testERC20.balanceOf(maker.address);
     // backend
-    await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords);
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
 
     await marketplaceContract
       .connect(member)
-      .matchOrdersWithRandom([sellerOrder.order, buyerOrder.order], fufillments, reqIdOrNumWords, [
-        { orderHash: sellerOrder.orderHash, numerator: 1, denominator: 2 },
+      .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
+        { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
       ]);
 
-    expect(await testERC20.balanceOf(seller.address).then((b) => b.toString())).to.be.eq(sellerErc20Balance.toString());
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.toString());
+    expect(await testERC20.balanceOf(maker.address).then((b) => b.toString())).to.be.eq(makerErc20Balance.toString());
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.toString());
   });
   it("Full order match bid", async () => {
-    const { nftId, amount } = await mint1155(seller);
-    // buyer
-    await mintAndApproveERC20(buyer, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      buyer,
+    const { nftId, amount } = await mint1155(maker);
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("7"), parseEther("9.5"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, buyer.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
 
-    // seller
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
-    const sellerOrder = await createOrder(
-      seller,
+    // maker
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), seller.address)],
+      [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
       0
     );
 
     const reqIdOrNumWords = 1;
     // backend
-    await marketplaceContract.connect(member).prepare([buyerOrder.order, sellerOrder.order], [], [], reqIdOrNumWords);
+    await marketplaceContract.connect(member).prepare([takerOrder.order, makerOrder.order], [], [], reqIdOrNumWords);
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([buyerOrder.order, sellerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: sellerOrder.orderHash, numerator: 1, denominator: 2 },
+        .matchOrdersWithRandom([takerOrder.order, makerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [seller.address, buyer.address], [parseEther("9"), parseEther("0.5")]);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq("1");
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("9"), parseEther("0.5")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("1");
   });
   it("Full order match bid revert", async () => {
-    const { nftId, amount } = await mint1155(seller);
-    // buyer
-    await mintAndApproveERC20(buyer, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      buyer,
+    const { nftId, amount } = await mint1155(maker);
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, buyer.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
 
-    // seller
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
-    const sellerOrder = await createOrder(
-      seller,
+    // maker
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), seller.address)],
+      [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
       0
     );
 
     const reqIdOrNumWords = 1;
     // backend
-    await marketplaceContract.connect(member).prepare([buyerOrder.order, sellerOrder.order], [], [], reqIdOrNumWords);
+    await marketplaceContract.connect(member).prepare([takerOrder.order, makerOrder.order], [], [], reqIdOrNumWords);
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([buyerOrder.order, sellerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: buyerOrder.orderHash, numerator: 1, denominator: 2 },
+        .matchOrdersWithRandom([takerOrder.order, makerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [seller.address, buyer.address], [parseEther("0"), parseEther("10")]);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.toString());
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq("0");
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("0"), parseEther("10")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.toString());
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("0");
   });
 
   it("Partial order match listing", async () => {
-    // seller
-    const { nftId, amount } = await mint1155(seller);
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
-    const sellerOrder = await createOrder(
-      seller,
+    // maker
+    const { nftId, amount } = await mint1155(maker);
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 4, 4)],
-      [getTestItem20(parseEther("32"), parseEther("40"), seller.address)],
+      [getTestItem20(parseEther("32"), parseEther("40"), maker.address)],
       1 // Partial open
     );
 
-    // buyer
-    await mintAndApproveERC20(buyer, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      buyer,
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("24"), parseEther("30"))],
-      [getTestItem1155(nftId, 3, 3, testERC1155.address, buyer.address)],
+      [getTestItem1155(nftId, 3, 3, testERC1155.address, taker.address)],
       0
     );
 
     // backend
-    sellerOrder.order.numerator = 3; // partial 分子
-    sellerOrder.order.denominator = 4; // partial 分母
+    makerOrder.order.numerator = 3; // partial 分子
+    makerOrder.order.denominator = 4; // partial 分母
     const reqIdOrNumWords = 2;
-    await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(3).toString());
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(3).toString());
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([sellerOrder.order, buyerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: sellerOrder.orderHash, numerator: 1, denominator: 2 },
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
     )
       .to.emit(marketplaceContract, "MatchSuccessOrNot")
       .withArgs(reqIdOrNumWords, true)
-      .changeTokenBalances(testERC20, [seller.address, buyer.address], [parseEther("27"), parseEther("3")]);
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq("3");
+      .changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("27"), parseEther("3")]);
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("3");
 
-    // buyer2
-    await mintAndApproveERC20(buyer2, marketplaceContract.address, parseEther("100"));
-    const buyerOrder2 = await createOrder(
-      buyer2,
+    // taker2
+    await mintAndApproveERC20(taker2, marketplaceContract.address, parseEther("100"));
+    const takerOrder2 = await createOrder(
+      taker2,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, buyer2.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker2.address)],
       0
     );
 
     // backend
-    sellerOrder.order.numerator = 1; // partial 分子
-    sellerOrder.order.denominator = 4; // partial 分母
+    makerOrder.order.numerator = 1; // partial 分子
+    makerOrder.order.denominator = 4; // partial 分母
     const reqIdOrNumWords2 = 2;
-    await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder2.order], [], [], reqIdOrNumWords);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(4).toString());
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder2.order], [], [], reqIdOrNumWords);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(4).toString());
 
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([sellerOrder.order, buyerOrder2.order], fufillments, reqIdOrNumWords, [
-          { orderHash: sellerOrder.orderHash, numerator: 1, denominator: 2 },
+        .matchOrdersWithRandom([makerOrder.order, takerOrder2.order], fufillments, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
     )
       .to.emit(marketplaceContract, "MatchSuccessOrNot")
       .withArgs(reqIdOrNumWords2, true)
-      .changeTokenBalances(testERC20, [seller.address, buyer2.address], [parseEther("9"), parseEther("1")]);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(4).toString());
-    expect(await testERC1155.balanceOf(buyer2.address, nftId).then((b) => b.toString())).to.be.eq("1");
+      .changeTokenBalances(testERC20, [maker.address, taker2.address], [parseEther("9"), parseEther("1")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(4).toString());
+    expect(await testERC1155.balanceOf(taker2.address, nftId).then((b) => b.toString())).to.be.eq("1");
   });
   it("Partial order match bid", async () => {
-    const { nftId, amount } = await mint1155(buyer);
-    // seller
-    await mintAndApproveERC20(seller, marketplaceContract.address, parseEther("100"));
-    const sellerOrder = await createOrder(
-      seller,
+    const { nftId, amount } = await mint1155(taker);
+    // maker
+    await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("32"), parseEther("40"))],
-      [getTestItem1155(nftId, 4, 4, testERC1155.address, seller.address)],
+      [getTestItem1155(nftId, 4, 4, testERC1155.address, maker.address)],
       1 // Partial open
     );
-    // buyer
-    await set1155ApprovalForAll(buyer, marketplaceContract.address);
-    const buyerOrder = await createOrder(
-      buyer,
+    // taker
+    await set1155ApprovalForAll(taker, marketplaceContract.address);
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 3, 3, testERC1155.address)],
-      [getTestItem20(parseEther("24"), parseEther("30"), buyer.address)],
+      [getTestItem20(parseEther("24"), parseEther("30"), taker.address)],
       0
     );
     // backend
-    sellerOrder.order.numerator = 3; // partial 分子
-    sellerOrder.order.denominator = 4; // partial 分母
+    makerOrder.order.numerator = 3; // partial 分子
+    makerOrder.order.denominator = 4; // partial 分母
     const reqIdOrNumWords = 2;
     await expect(
-      marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords)
+      marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords)
     ).to.changeTokenBalance(testERC20, marketplaceContract.address, parseEther("30"));
 
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([sellerOrder.order, buyerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: buyerOrder.orderHash, numerator: 1, denominator: 2 },
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
     )
       .to.emit(marketplaceContract, "MatchSuccessOrNot")
       .withArgs(reqIdOrNumWords, true)
-      .changeTokenBalances(testERC20, [buyer.address, seller.address], [parseEther("27"), parseEther("3")]);
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(3).toString());
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq("3");
+      .changeTokenBalances(testERC20, [taker.address, maker.address], [parseEther("27"), parseEther("3")]);
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(3).toString());
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq("3");
   });
 
   it("Zero assets match", async () => {
-    // seller
-    const { nftId, amount } = await mint1155(seller);
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
+    // maker
+    const { nftId, amount } = await mint1155(maker);
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
     const Zero = toBN("0");
-    const sellerOrder = await createOrder(
-      seller,
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(Zero, parseEther("10"), seller.address)],
+      [getTestItem20(Zero, parseEther("10"), maker.address)],
       0
     );
 
-    // buyer
-    await mintAndApproveERC20(buyer, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      buyer,
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem20(Zero, parseEther("9.5"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, buyer.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
     const reqIdOrNumWords = 1;
     // backend
-    await marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order], [], [], reqIdOrNumWords);
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([sellerOrder.order, buyerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: sellerOrder.orderHash, numerator: 0, denominator: 2 },
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 0, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [seller.address, buyer.address], [Zero, parseEther("9.5")]);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq("1");
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [Zero, parseEther("9.5")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("1");
   });
 
   it("Primenum match", async () => {
-    // seller
-    const { nftId, amount } = await mint1155(seller);
-    await set1155ApprovalForAll(seller, marketplaceContract.address);
+    // maker
+    const { nftId, amount } = await mint1155(maker);
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
     const Zero = toBN("0");
-    const sellerOrder = await createOrder(
-      seller,
+    const makerOrder = await createOrder(
+      maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("9"), parseEther("10"), seller.address)],
+      [getTestItem20(parseEther("9"), parseEther("10"), maker.address)],
       0
     );
 
-    // buyer
-    await mintAndApproveERC20(buyer, marketplaceContract.address, parseEther("100"));
-    const buyerOrder = await createOrder(
-      buyer,
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
       ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("9.2"))],
-      [getTestItem1155(nftId, 1, 1, testERC1155.address, buyer.address)],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
-    // preminum 
-    const preminumOrder = await createOrder(
-      buyer,
-      ethers.constants.AddressZero,
-      [getTestItem20(parseEther("1"), parseEther("1"))],
-      [],
-      0
-    );
+    // preminum
+    const preminumOrder = await createOrder(taker, ethers.constants.AddressZero, [getTestItem20(parseEther("1"), parseEther("1"))], [], 0);
 
     const reqIdOrNumWords = 1;
     // backend
-    await expect(marketplaceContract.connect(member).prepare([sellerOrder.order, buyerOrder.order, preminumOrder.order], [2], [seller.address], reqIdOrNumWords))
-    .to.changeTokenBalances(testERC20, [seller.address, marketplaceContract.address], [parseEther("1"), parseEther("9.2")]);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .prepare([makerOrder.order, takerOrder.order, preminumOrder.order], [2], [maker.address], reqIdOrNumWords)
+    ).to.changeTokenBalances(testERC20, [maker.address, marketplaceContract.address], [parseEther("1"), parseEther("9.2")]);
 
     await expect(
       marketplaceContract
         .connect(member)
-        .matchOrdersWithRandom([sellerOrder.order, buyerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: sellerOrder.orderHash, numerator: 0, denominator: 2 },
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 0, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [seller.address, buyer.address], [parseEther("9"), parseEther("0.2")]);
-    expect(await testERC1155.balanceOf(seller.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
-    expect(await testERC1155.balanceOf(buyer.address, nftId).then((b) => b.toString())).to.be.eq("1");
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("9"), parseEther("0.2")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("1");
+  });
+
+  it("Transition fee work for List", async () => {
+    // maker
+    const { nftId, amount } = await mint1155(maker);
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
+    const fee = 5;
+    const culFee = (p: BigNumber) => p.mul(fee).div(1000);
+    const subFee = (p: BigNumber) => p.sub(culFee(p));
+    const makerOrder = await createOrder(
+      maker,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 1, 1)],
+      [
+        getTestItem20(subFee(parseEther("8")), subFee(parseEther("10")), maker.address),
+        getTestItem20(culFee(parseEther("8")), culFee(parseEther("10")), feeReciver.address),
+      ],
+      0
+    );
+
+    // taker
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    const takerOrder = await createOrder(
+      taker,
+      ethers.constants.AddressZero,
+      [getTestItem20(parseEther("8"), parseEther("10"))],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
+      0
+    );
+    const reqIdOrNumWords = 1;
+    // backend
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillmentsFeeList, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
+        ])
+    ).to.changeTokenBalances(
+      testERC20,
+      [maker.address, taker.address, feeReciver.address],
+      [subFee(parseEther("9")), parseEther("1"), culFee(parseEther("9"))]
+    );
+  });
+
+  it("Transition fee work for Bid", async () => {
+    const { nftId, amount } = await mint1155(taker);
+    // maker
+    const fee = 5; // 5/1000
+    const culFee = (p: BigNumber) => p.mul(fee).div(1000);
+    const subFee = (p: BigNumber) => p.sub(culFee(p));
+    await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
+    const makerOrder = await createOrder(
+      maker,
+      ethers.constants.AddressZero,
+      [getTestItem20(parseEther("8"), parseEther("10"))],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, maker.address)],
+      0
+    );
+    // taker
+    await set1155ApprovalForAll(taker, marketplaceContract.address);
+    const takerOrder = await createOrder(
+      taker,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 1, 1, testERC1155.address)],
+      [
+        getTestItem20(subFee(parseEther("8")), subFee(parseEther("10")), taker.address),
+        getTestItem20(culFee(parseEther("8")), culFee(parseEther("10")), feeReciver.address),
+      ],
+      0
+    );
+    const reqIdOrNumWords = 1;
+    // backend
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillmentsFeeBid, reqIdOrNumWords, [
+          { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
+        ])
+    ).to.changeTokenBalances(
+      testERC20,
+      [maker.address, taker.address, feeReciver.address],
+      [parseEther("1"), subFee(parseEther("9")), culFee(parseEther("9"))]
+    );
+  });
+
+  it("Transition fee work for Partial List", async () => {
+    const nftId = 1;
+    await mint1155(maker, 1, testERC1155, nftId);
+    await set1155ApprovalForAll(maker, marketplaceContract.address)
+    await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
+    await mintAndApproveERC20(taker2, marketplaceContract.address, parseEther("100"));
+    const fee = 5; // 5/1000
+    const culFee = (p: BigNumber) => p.mul(fee).div(1000);
+    const subFee = (p: BigNumber) => p.sub(culFee(p));
+
+    // maker
+    const makerOrder = await createOrder(
+      maker,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 3, 3, testERC1155.address)],
+      [
+        getTestItem20(subFee(parseEther("24")), subFee(parseEther("30")), maker.address),
+        getTestItem20(culFee(parseEther("24")), culFee(parseEther("30")), feeReciver.address),
+      ],
+      1
+    );
+    // taker1
+    const takerOrder = await createOrder(
+      taker,
+      ethers.constants.AddressZero,
+      [getTestItem20(parseEther("8"), parseEther("10"))],
+      [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
+      0
+    );
+    const reqIdOrNumWords = 1;
+    makerOrder.order.numerator = 1;
+    makerOrder.order.denominator = 3;
+    // backend
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillmentsFeeList, reqIdOrNumWords, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
+        ])
+    ).to.changeTokenBalances(
+      testERC20,
+      [taker.address, maker.address, feeReciver.address],
+      [parseEther("1"), subFee(parseEther("9")), culFee(parseEther("9"))]
+    );
+
+    // taker2
+    const taker2Order = await createOrder(
+      taker2,
+      ethers.constants.AddressZero,
+      [getTestItem20(parseEther("16"), parseEther("20"))],
+      [getTestItem1155(nftId, 2, 2, testERC1155.address, taker.address)],
+      0
+    );
+    const reqIdOrNumWords2 = 2;
+    // backend
+    makerOrder.order.numerator = 2;
+    makerOrder.order.denominator = 3;
+    await marketplaceContract.connect(member).prepare([makerOrder.order, taker2Order.order], [], [], reqIdOrNumWords2);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .matchOrdersWithRandom([makerOrder.order, taker2Order.order], fufillmentsFeeList, reqIdOrNumWords2, [
+          { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
+        ])
+    ).to.changeTokenBalances(
+      testERC20,
+      [taker2.address, maker.address, feeReciver.address],
+      [parseEther("2"), subFee(parseEther("18")), culFee(parseEther("18"))]
+    );
+  });
+
+  it("Transition fee work for Partial Bid", async () => {
+    const nftId = 1;
+    await mint1155(taker, 1, testERC1155, nftId);
+    await mint1155(taker2, 1, testERC1155, nftId);
+    const fee = 5; // 5/1000
+    const culFee = (p: BigNumber) => p.mul(fee).div(1000);
+    const subFee = (p: BigNumber) => p.sub(culFee(p));
+
+    // maker
+    await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
+    const makerOrder = await createOrder(
+      maker,
+      ethers.constants.AddressZero,
+      [getTestItem20(parseEther("24"), parseEther("30"))],
+      [getTestItem1155(nftId, 3, 3, testERC1155.address, maker.address)],
+      1
+    );
+    // taker1
+    await set1155ApprovalForAll(taker, marketplaceContract.address);
+    const takerOrder = await createOrder(
+      taker,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 1, 1, testERC1155.address)],
+      [
+        getTestItem20(subFee(parseEther("8")), subFee(parseEther("10")), taker.address),
+        getTestItem20(culFee(parseEther("8")), culFee(parseEther("10")), feeReciver.address),
+      ],
+      0
+    );
+    const reqIdOrNumWords = 1;
+    makerOrder.order.numerator = 1;
+    makerOrder.order.denominator = 3;
+    // backend
+    await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillmentsFeeBid, reqIdOrNumWords, [
+          { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
+        ])
+    ).to.changeTokenBalances(
+      testERC20,
+      [maker.address, taker.address, feeReciver.address],
+      [parseEther("1"), subFee(parseEther("9")), culFee(parseEther("9"))]
+    );
+
+    // taker2
+    await set1155ApprovalForAll(taker2, marketplaceContract.address);
+    const taker2Order = await createOrder(
+      taker2,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 2, 2, testERC1155.address)],
+      [
+        getTestItem20(subFee(parseEther("16")), subFee(parseEther("20")), taker2.address),
+        getTestItem20(culFee(parseEther("16")), culFee(parseEther("20")), feeReciver.address),
+      ],
+      0
+    );
+    const reqIdOrNumWords2 = 2;
+    // backend
+    makerOrder.order.numerator = 2;
+    makerOrder.order.denominator = 3;
+    await marketplaceContract.connect(member).prepare([makerOrder.order, taker2Order.order], [], [], reqIdOrNumWords2);
+    await expect(
+      marketplaceContract
+        .connect(member)
+        .matchOrdersWithRandom([makerOrder.order, taker2Order.order], fufillmentsFeeBid, reqIdOrNumWords2, [
+          { orderHash: taker2Order.orderHash, numerator: 1, denominator: 2 },
+        ])
+    ).to.changeTokenBalances(
+      testERC20,
+      [maker.address, taker2.address, feeReciver.address],
+      [parseEther("2"), subFee(parseEther("18")), culFee(parseEther("18"))]
+    );
   });
 });
