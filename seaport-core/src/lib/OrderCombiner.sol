@@ -998,7 +998,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
             for (uint256 i = 0; i < totalFulfillments; ++i) {
                 /// Retrieve the fulfillment in question.
                 Fulfillment memory fulfillment = fulfillments[i];
-
+                
                 // Derive the execution corresponding with the fulfillment.
                 Execution memory execution = _applyFulfillment(
                     advancedOrders, fulfillment.offerComponents, fulfillment.considerationComponents, i
@@ -1013,11 +1013,12 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                     executions[i - totalFilteredExecutions] = execution;
                 // }
                 // skip the following execution since it should fail
-                if (_isZeroExecution(execution)) {
-                    totalFilteredExecutions += totalFulfillments - i - 1;
-                    // revert("Error on zero amount");
-                    break;
-                }
+                // if (_isZeroExecution(execution)) {
+                //     totalFilteredExecutions += totalFulfillments - i - 1;
+                //     // revert("Error on zero amount");
+                //     // break;
+                //     continue;
+                // }
             }
 
             // If some number of executions have been filtered...

@@ -377,7 +377,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq("3");
   });
 
-  it("Zero assets match", async () => {
+  it("Zero assets match fot List", async () => {
     // maker
     const { nftId, amount } = await mint1155(maker);
     await set1155ApprovalForAll(maker, marketplaceContract.address);
@@ -411,6 +411,64 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [Zero, parseEther("9.5")]);
     expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
     expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("1");
+  });
+  it("Multi zero assets match for bid", async () => {
+    const nftId = 1,
+      amount = 10;
+    await mint1155(taker, 1, testERC1155, nftId, amount);
+    await mint1155(taker2, 1, testERC1155, nftId, amount);
+    await set1155ApprovalForAll(taker, marketplaceContract.address);
+    await set1155ApprovalForAll(taker2, marketplaceContract.address);
+    await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("1000"));
+    // maker
+    const Zero = toBN("0");
+    const makerOrder = await createOrder(
+      maker,
+      ethers.constants.AddressZero,
+      [getTestItem20(Zero, parseEther("20"))],
+      [getTestItem1155(nftId, 2, 2, testERC1155.address, maker.address)],
+      0
+    );
+    // taker
+    const takerOrder = await createOrder(
+      taker,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 1, 1, testERC1155.address)],
+      [getTestItem20(Zero, parseEther("10"), taker.address)],
+      0
+    );
+    // taker2
+    const taker2Order = await createOrder(
+      taker2,
+      ethers.constants.AddressZero,
+      [getTestItem1155(nftId, 1, 1, testERC1155.address)],
+      [getTestItem20(Zero, parseEther("10"), taker2.address)],
+      0
+    );
+    const reqIdOrNumWords = 2;
+    // backend
+    await marketplaceContract
+      .connect(member)
+      .prepare([makerOrder.order, takerOrder.order, taker2Order.order], [], [], reqIdOrNumWords);
+    await expect(
+      marketplaceContract.connect(member).matchOrdersWithRandom(
+        [makerOrder.order, takerOrder.order, taker2Order.order],
+        [
+          { offerComponents: [{ orderIndex: 0, itemIndex: 0 }], considerationComponents: [{ orderIndex: 1, itemIndex: 0 }] },
+          { offerComponents: [{ orderIndex: 1, itemIndex: 0 }], considerationComponents: [{ orderIndex: 0, itemIndex: 0 }] },
+          { offerComponents: [{ orderIndex: 0, itemIndex: 0 }], considerationComponents: [{ orderIndex: 2, itemIndex: 0 }] },
+          { offerComponents: [{ orderIndex: 2, itemIndex: 0 }], considerationComponents: [{ orderIndex: 0, itemIndex: 0 }] },
+        ],
+        reqIdOrNumWords,
+        [
+          { orderHash: takerOrder.orderHash, numerator: 0, denominator: 2 },
+          { orderHash: taker2Order.orderHash, numerator: 1, denominator: 2 },
+        ]
+      )
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address, taker2.address], [parseEther("15"), Zero, parseEther("5")]);
+    expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq("2");
+    expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq(amount - 1 + "");
+    expect(await testERC1155.balanceOf(taker2.address, nftId).then((b) => b.toString())).to.be.eq(amount - 1 + "");
   });
 
   it("Primenum match", async () => {
@@ -545,7 +603,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
   it("Transition fee work for Partial List", async () => {
     const nftId = 1;
     await mint1155(maker, 1, testERC1155, nftId);
-    await set1155ApprovalForAll(maker, marketplaceContract.address)
+    await set1155ApprovalForAll(maker, marketplaceContract.address);
     await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
     await mintAndApproveERC20(taker2, marketplaceContract.address, parseEther("100"));
     const fee = 5; // 5/1000
