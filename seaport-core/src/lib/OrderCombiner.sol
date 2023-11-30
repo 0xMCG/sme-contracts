@@ -41,6 +41,7 @@ import {
     TwoWords
 } from "seaport-types/src/lib/ConsiderationConstants.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title OrderCombiner
@@ -273,37 +274,37 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                         true // round up
                     );
                     considerationItem.startAmount = currentAmount;
-
+                    considerationItem.endAmount = endAmount - currentAmount;
                     // Utilize assembly to manually "shift" the recipient value,
                     // then to copy the start amount to the recipient.
                     // Note that this sets up the memory layout that is
                     // subsequently relied upon by
                     // _aggregateValidFulfillmentConsiderationItems.
-                    assembly {
-                        // Derive the pointer to the recipient using the item
-                        // pointer along with the offset to the recipient.
-                        let considerationItemRecipientPtr :=
-                            add(
-                                considerationItem,
-                                ConsiderationItem_recipient_offset // recipient
-                            )
+                    // assembly {
+                    //     // Derive the pointer to the recipient using the item
+                    //     // pointer along with the offset to the recipient.
+                    //     let considerationItemRecipientPtr :=
+                    //         add(
+                    //             considerationItem,
+                    //             ConsiderationItem_recipient_offset // recipient
+                    //         )
 
-                        // Write recipient to endAmount, as endAmount is not
-                        // used from this point on and can be repurposed to fit
-                        // the layout of a ReceivedItem.
-                        mstore(
-                            add(
-                                considerationItem,
-                                ReceivedItem_recipient_offset // old endAmount
-                            ),
-                            mload(considerationItemRecipientPtr)
-                        )
+                    //     // Write recipient to endAmount, as endAmount is not
+                    //     // used from this point on and can be repurposed to fit
+                    //     // the layout of a ReceivedItem.
+                    //     mstore(
+                    //         add(
+                    //             considerationItem,
+                    //             ReceivedItem_recipient_offset // old endAmount
+                    //         ),
+                    //         mload(considerationItemRecipientPtr)
+                    //     )
 
-                        // Write startAmount to recipient, as recipient is not
-                        // used from this point on and can be repurposed to
-                        // track received amounts.
-                        mstore(considerationItemRecipientPtr, currentAmount)
-                    }
+                    //     // Write startAmount to recipient, as recipient is not
+                    //     // used from this point on and can be repurposed to
+                    //     // track received amounts.
+                    //     mstore(considerationItemRecipientPtr, currentAmount)
+                    // }
                 }
             }
         }
@@ -365,6 +366,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
     function checkIfProbilityExists(OrderProbility[] memory orderProbility, bytes32 orderHash) internal returns(uint256, uint256) {
         for(uint i = 0; i < orderProbility.length; i++) {
             if(orderProbility[i].orderHash == orderHash) {
+                require(orderProbility[i].numerator <= orderProbility[i].denominator && orderProbility[i].denominator > 0, "Error for orderProbility");
                 return (orderProbility[i].numerator, orderProbility[i].denominator);
             }
         }
@@ -547,7 +549,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                         // Revert if the remaining amount is not zero.
                         if (unmetAmount != 0) {
                             returnBack = true;
-                            break;
+                            // break;
                         }
 
                         // Utilize assembly to restore the original value.
@@ -561,9 +563,9 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                     }
                 }
                 // revert all execution back
-                if(returnBack){
-                    break;
-                }
+                // if(returnBack){
+                //     break;
+                // }
             }
 
             for (uint256 i = 0; i < totalOrders; ++i){
@@ -746,6 +748,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
             advancedOrders.length,
             orderProbility
         );
+        // _logOrders(advancedOrders);
         // Fulfill the orders using the supplied fulfillments and recipient.
         return _fulfillAdvancedOrdersWithRandom(advancedOrders, fulfillments, orderHashes);
     }
@@ -1003,7 +1006,7 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 Execution memory execution = _applyFulfillment(
                     advancedOrders, fulfillment.offerComponents, fulfillment.considerationComponents, i
                 );
-                // console.log("Built one execution");
+              
                 // If the execution is filterable...
                 // if (_isFilterableExecution(execution)) {
                 //     // Increment total filtered executions.
@@ -1013,14 +1016,13 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                     executions[i - totalFilteredExecutions] = execution;
                 // }
                 // skip the following execution since it should fail
-                // if (_isZeroExecution(execution)) {
-                //     totalFilteredExecutions += totalFulfillments - i - 1;
-                //     // revert("Error on zero amount");
-                //     // break;
-                //     continue;
-                // }
+                if (_isZeroExecution(execution)) {
+                    // totalFilteredExecutions += totalFulfillments - i - 1;
+                    ++totalFilteredExecutions;
+                    // revert("Error on zero amount");
+                    // break;
+                }
             }
-
             // If some number of executions have been filtered...
             if (totalFilteredExecutions != 0) {
                 // reduce the total length of the executions array.
@@ -1029,10 +1031,12 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
                 }
             }
         }
+
+        // _logOrders(advancedOrders);
         // change offer instead of recipient
         // Perform final checks and execute orders.
         bool returnBack = _performFinalChecksAndExecuteOrdersWithRandom(advancedOrders, executions, orderHashes);
-
+        
         if(!returnBack) {
             // Emit OrdersMatched event, providing an array of matched order hashes.
             _emitOrdersMatched(orderHashes);
@@ -1085,4 +1089,14 @@ contract OrderCombiner is OrderFulfiller, FulfillmentApplier {
             isZero := iszero(mload(add(item, ReceivedItem_amount_offset)))
         }
     }
+
+    // function _logOrders(AdvancedOrder[] memory advancedOrders) internal {
+    //     unchecked {
+    //         for (uint256 i = 0; i < advancedOrders.length; i++) {
+    //            OfferItem memory  offer = advancedOrders[i].parameters.offer[0];
+    //            ConsiderationItem memory cons = advancedOrders[i].parameters.consideration[0];
+    //             console.log(offer.startAmount, offer.endAmount, cons.startAmount, cons.endAmount);
+    //         }
+    //     }
+    // }
 }

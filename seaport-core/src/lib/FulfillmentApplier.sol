@@ -91,7 +91,6 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
 
         // Retrieve the consideration item from the execution struct.
         ReceivedItem memory considerationItem = considerationExecution.item;
-
         // Skip aggregating offer items if no consideration items are available.
         if (considerationItem.amount == 0) {
             // Set the offerer and recipient to null address and the item type
@@ -121,8 +120,6 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
             _revertMismatchedFulfillmentOfferAndConsiderationComponents(fulfillmentIndex);
         }
 
-        // console.log("ex:", execution.item.amount);
-        // console.log("condider:", considerationItem.amount);
         // If total consideration amount exceeds the offer amount...
         if (considerationItem.amount > execution.item.amount) {
             // Retrieve the first consideration component from the fulfillment.
@@ -150,7 +147,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
             // Reduce total offer amount to equal the consideration amount.
             execution.item.amount = considerationItem.amount;
         }
-
+        
         // Reuse consideration recipient.
         execution.item.recipient = considerationItem.recipient;
 
@@ -322,7 +319,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
 
                     // Update the amount to the new, summed amount.
                     amount := newAmount
-
+                    // set offer startAmount = 0
                     // Zero out amount on original item to indicate it is spent.
                     mstore(amountPtr, 0)
                 }
@@ -460,6 +457,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
         Execution memory execution,
         bool errorOnZero
     ) internal pure {
+        
         // Utilize assembly in order to efficiently aggregate the items.
         assembly {
             // Declare a variable for the final aggregated item amount.
@@ -544,6 +542,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
                     // Update the amount to the new, summed amount.
                     amount := newAmount
 
+                    // consideration startAmount = 0;
                     // Zero out original item amount to indicate it is credited.
                     mstore(amountPtr, 0)
                 }
@@ -575,7 +574,7 @@ contract FulfillmentApplier is FulfillmentApplicationErrors {
                     // _validateOrdersAndPrepareToFulfill function.
                     mstore(
                         add(receivedItem, ReceivedItem_recipient_offset),
-                        mload(add(considerationItemPtr, ReceivedItem_recipient_offset))
+                        mload(add(considerationItemPtr, 0xA0))
                     )
 
                     // Calculate the hash of (itemType, token, identifier,

@@ -132,7 +132,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
       maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
+      [getTestItem20(("8"), ("10"), maker.address)],
       0
     );
 
@@ -141,7 +141,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     const takerOrder = await createOrder(
       taker,
       ethers.constants.AddressZero,
-      [getTestItem20(parseEther("7"), parseEther("9.5"))],
+      [getTestItem20(("8"), ("10"))],
       [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
@@ -155,7 +155,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
         .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
           { orderHash: makerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("9"), parseEther("0.5")]);
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [("9"), ("1")]);
     expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.sub(1).toString());
     expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("1");
   });
@@ -236,7 +236,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
     const takerOrder = await createOrder(
       taker,
       ethers.constants.AddressZero,
-      [getTestItem20(parseEther("8"), parseEther("10"))],
+      [getTestItem20(("8"), ("10"))],
       [getTestItem1155(nftId, 1, 1, testERC1155.address, taker.address)],
       0
     );
@@ -247,7 +247,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
       maker,
       ethers.constants.AddressZero,
       [getTestItem1155(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
+      [getTestItem20(("8"), ("10"), maker.address)],
       0
     );
 
@@ -260,7 +260,7 @@ describe(`Mathch tests (Seaport v${VERSION})`, function () {
         .matchOrdersWithRandom([takerOrder.order, makerOrder.order], fufillments, reqIdOrNumWords, [
           { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
         ])
-    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [parseEther("0"), parseEther("10")]);
+    ).to.changeTokenBalances(testERC20, [maker.address, taker.address], [("0"), ("10")]);
     expect(await testERC1155.balanceOf(maker.address, nftId).then((b) => b.toString())).to.be.eq(amount.toString());
     expect(await testERC1155.balanceOf(taker.address, nftId).then((b) => b.toString())).to.be.eq("0");
   });
