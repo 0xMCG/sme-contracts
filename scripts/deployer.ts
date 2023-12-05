@@ -1,6 +1,7 @@
 import { BigNumberish } from "ethers";
 import { ethers, network } from "hardhat";
-import { deployUseCreate2, saveAny } from "./hutils";
+import { deployContract, deployUseCreate2, saveAny } from "./hutils";
+import { parseEther } from "ethers/lib/utils";
 
 const VRFConfig: {
   [k: string]: { coor: string; subId: BigNumberish; keyHash: string };
@@ -53,6 +54,9 @@ async function main() {
     config.coor,
     config.keyHash,
   ]);
+
+  // SmeGasManager
+  const smeGasManagerAddress = await deployContract("SmeGasManager", [parseEther("0.0001").toString()]);
 
   // createConduit
   const lcc = await ethers.getContractAt("LocalConduitController", conduitControllerAddress);
