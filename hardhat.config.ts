@@ -146,8 +146,8 @@ const config: HardhatUserConfig = {
       url: "https://arbitrum-one.public.blastapi.io",
       accounts: [`${process.env.PRIVATE_KEY}`],
     },
-    arb_goerli: {
-      url: "https://arbitrum-goerli.public.blastapi.io",
+    arb_sepolia: {
+      url: "https://arbitrum-sepolia.public.blastapi.io",
       accounts: [`${process.env.PRIVATE_KEY}`],
     },
   },
@@ -160,7 +160,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       arb: process.env.ARBSCAN_KEY || "",
-      arb_goerli: process.env.ARBSCAN_KEY || "",
+      arb_sepolia: process.env.ARBSCAN_KEY || "",
       sepolia: process.env.ETHERSCAN_KEY || "",
     },
     customChains: [
@@ -173,11 +173,11 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        network: "arb_goerli",
+        network: "arb_sepolia",
         chainId: 421613,
         urls: {
-          apiURL: "https://api-goerli.arbiscan.io/api",
-          browserURL: "https://goerli.arbiscan.io/",
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/",
         },
       },
       {

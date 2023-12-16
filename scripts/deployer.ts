@@ -11,10 +11,10 @@ const VRFConfig: {
     subId: 7066,
     keyHash: "0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c",
   },
-  arb_goerli: {
-    coor: "0x6D80646bEAdd07cE68cab36c27c626790bBcf17f",
-    subId: 236,
-    keyHash: "0x83d1b6e3388bed3d76426974512bb0d270e9542a765cd667242ea26c0cc0b730",
+  arb_sepolia: {
+    coor: "0x50d47e4142598E3411aA864e08a44284e471AC6f",
+    subId: 36,
+    keyHash: "0x027f94ff1465b3525f9fc03e9ff7d6d2c0953482246dd6ae07570c45d6631414",
   },
   arb: {
     coor: "0x41034678D6C633D8a95c75e1138A360a28bA15d1",
@@ -25,7 +25,7 @@ const VRFConfig: {
 
 const MemberConfig: { [k: string]: string } = {
   sepolia: "0x7ddBFF9D74D0A2F33Dfb13cEC538B334f2011462",
-  arb_goerli: "0x0da3C82d0785ad289Be2Cb6cE7382a879E72d18b",
+  arb_sepolia: "0x0da3C82d0785ad289Be2Cb6cE7382a879E72d18b",
 };
 
 async function main() {
