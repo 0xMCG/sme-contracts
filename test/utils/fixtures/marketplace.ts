@@ -16,11 +16,13 @@ import { VERSION } from "../helpers";
 import type {
   ConduitControllerInterface,
   ConduitInterface,
+  Consideration,
   ConsiderationInterface,
   ImmutableCreate2FactoryInterface,
   TestInvalidContractOfferer,
   TestInvalidContractOffererRatifyOrder,
   TestPostExecution,
+  TestVRF,
   TestZone,
 } from "../../../typechain-types";
 import type {
@@ -86,6 +88,12 @@ export const marketplaceFixture = async (
     .connect(owner)
     .updateChannel(conduitOne.address, marketplaceContract.address, true);
 
+  // setTestVRF
+  if(!process.env.REFERENCE) {
+    const market = marketplaceContract as unknown as Consideration
+    const testVRF = await deployContract<TestVRF>("TestVRF", owner)
+    await market.connect(owner).updateVRFAddress(testVRF.address)
+  } 
   const stubZone = await deployContract<TestZone>("TestZone", owner);
   const postExecutionZone = await deployContract<TestPostExecution>(
     "TestPostExecution",
