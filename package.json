@@ -10,13 +10,18 @@
     "node": ">=16.15.1"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.8.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@openzeppelin/contracts": "^4.9.3",
     "ethers": "^5.5.3",
     "ethers-eip712": "^0.2.0",
-    "hardhat": "^2.12.1-ir.0",
+    "hardhat": "2.13.0",
     "merkletreejs": "^0.3.9",
-    "solady": "^0.0.84"
+    "seaport-core": "./seaport-core",
+    "seaport-sol": "./seaport-sol",
+    "seaport-types": "./seaport-types",
+    "solady": "^0.0.84",
+    "solmate": "^6.2.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
@@ -24,7 +29,7 @@
     "@nomiclabs/hardhat-etherscan": "^3.1.0",
     "@rari-capital/solmate": "^6.2.0",
     "@typechain/ethers-v5": "^10.0.0",
-    "@typechain/hardhat": "^6.0.0",
+    "@typechain/hardhat": "^6.1.2",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.11.11",

@@ -17,35 +17,28 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 
 // Filter Reference Contracts
-subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(
-  async (_, __, runSuper) => {
-    const paths = await runSuper();
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
+  const paths = await runSuper();
 
-    return paths.filter((p: any) => !p.includes("contracts/reference/"));
-  }
-);
+  return paths.filter((p: any) => !p.includes("contracts/reference/"));
+});
 
-task("write-reports", "Write pending gas reports").setAction(
-  async (taskArgs, hre) => {
-    writeReports(hre);
-  }
-);
+task("write-reports", "Write pending gas reports").setAction(async (taskArgs, hre) => {
+  writeReports(hre);
+});
 
-task("compare-reports", "Compare last two gas reports").setAction(
-  async (taskArgs, hre) => {
-    compareLastTwoReports(hre);
-  }
-);
+task("compare-reports", "Compare last two gas reports").setAction(async (taskArgs, hre) => {
+  compareLastTwoReports(hre);
+});
 
-task("print-report", "Print the last gas report").setAction(
-  async (taskArgs, hre) => {
-    printLastReport(hre);
-  }
-);
+task("print-report", "Print the last gas report").setAction(async (taskArgs, hre) => {
+  printLastReport(hre);
+});
 
 const optimizerSettingsNoSpecializer = {
   enabled: true,
-  runs: 4_294_967_295,
+  // runs: 4_294_967_295,
+  runs: 20000,
   details: {
     peephole: true,
     inliner: true,
@@ -75,7 +68,11 @@ const config: HardhatUserConfig = {
           optimizer: {
             ...(process.env.NO_SPECIALIZER
               ? optimizerSettingsNoSpecializer
-              : { enabled: true, runs: 4_294_967_295 }),
+              : {
+                  enabled: true,
+                  // runs: 4_294_967_295 ,
+                  runs: 20000,
+                }),
           },
           metadata: {
             bytecodeHash: "none",
@@ -95,7 +92,7 @@ const config: HardhatUserConfig = {
           viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 1000000,
+            runs: 10000,
           },
         },
       },
@@ -105,7 +102,7 @@ const config: HardhatUserConfig = {
           viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 1000000,
+            runs: 10000,
           },
         },
       },
@@ -115,7 +112,7 @@ const config: HardhatUserConfig = {
           viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 1000000,
+            runs: 10000,
           },
         },
       },
@@ -135,11 +132,23 @@ const config: HardhatUserConfig = {
     hardhat: {
       blockGasLimit: 30_000_000,
       throwOnCallFailures: false,
-      // Temporarily remove contract size limit for local test 
-      allowUnlimitedContractSize: true,
+      // Temporarily remove contract size limit for local test
+      allowUnlimitedContractSize: false,
     },
     verificationNetwork: {
       url: process.env.NETWORK_RPC ?? "",
+    },
+    sepolia: {
+      url: "https://eth-sepolia.public.blastapi.io",
+      accounts: [`${process.env.PRIVATE_KEY}`],
+    },
+    arb: {
+      url: "https://arbitrum-one.public.blastapi.io",
+      accounts: [`${process.env.PRIVATE_KEY}`],
+    },
+    arb_sepolia: {
+      url: "https://arbitrum-sepolia.public.blastapi.io",
+      accounts: [`${process.env.PRIVATE_KEY}`],
     },
   },
   gasReporter: {
@@ -149,7 +158,37 @@ const config: HardhatUserConfig = {
     noColors: true,
   },
   etherscan: {
-    apiKey: process.env.EXPLORER_API_KEY,
+    apiKey: {
+      arb: process.env.ARBSCAN_KEY || "",
+      arb_sepolia: process.env.ARBSCAN_KEY || "",
+      sepolia: process.env.ETHERSCAN_KEY || "",
+    },
+    customChains: [
+      {
+        network: "arb",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io/",
+        },
+      },
+      {
+        network: "arb_sepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/",
+        },
+      },
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io/",
+        },
+      },
+    ],
   },
   // specify separate cache for hardhat, since it could possibly conflict with foundry's
   paths: { cache: "hh-cache" },

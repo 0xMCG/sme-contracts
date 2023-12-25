@@ -9,5 +9,12 @@ module.exports = {
         compiler: "0.8.17",
       },
     },
+    { 
+      files: "*.ts" ,
+      options: {
+        tabWidth: 2,
+        printWidth: 140,
+      },
+    }
   ],
 };
