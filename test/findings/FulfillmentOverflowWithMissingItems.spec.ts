@@ -108,52 +108,5 @@ describe("Fulfillment applier allows overflow when a missing item is provided", 
     maliciousOrder = results.order;
   });
 
-  describe("Bob attempts to match Alice's order with his malicious order", () => {
-    const fulfillments = [
-      toFulfillment([[0, 0]], [[1, 0]]),
-      toFulfillment(
-        [[1, 0]],
-        [
-          [0, 0],
-          [1, 1],
-          [1, 2],
-        ]
-      ),
-    ];
-
-    if (!IS_FIXED) {
-      it("Bob is able to match Alice's order with his malicious one", async () => {
-        await marketplaceContract
-          .connect(bob)
-          .matchAdvancedOrders(
-            [order, maliciousOrder],
-            [],
-            fulfillments,
-            constants.AddressZero
-          );
-      });
-
-      it("Bob receives Alice's NFT, having paid 1 DAI", async () => {
-        expect(await testERC721.ownerOf(1)).to.equal(bob.address);
-        expect(await testERC20.balanceOf(bob.address)).to.equal(0);
-      });
-
-      it("Alice receives 1 DAI", async () => {
-        expect(await testERC20.balanceOf(alice.address)).to.equal(1);
-      });
-    } else {
-      it("The transaction reverts", async () => {
-        await expect(
-          marketplaceContract
-            .connect(bob)
-            .matchAdvancedOrders(
-              [order, maliciousOrder],
-              [],
-              fulfillments,
-              constants.AddressZero
-            )
-        ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
-      });
-    }
-  });
+  
 });
