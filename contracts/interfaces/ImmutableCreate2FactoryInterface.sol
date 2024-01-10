@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 /**
  * @title ImmutableCreate2FactoryInterface
- * @author 0age
+ * 
  * @notice This contract provides a safeCreate2 function that takes a salt value
  *         and a block of initialization code as arguments and passes them into
  *         inline assembly. The contract prevents redeploys by maintaining a
@@ -90,7 +90,5 @@ interface ImmutableCreate2FactoryInterface {
      *
      * @return True if the contract has been deployed, false otherwise.
      */
-    function hasBeenDeployed(
-        address deploymentAddress
-    ) external view returns (bool);
+    function hasBeenDeployed(address deploymentAddress) external view returns (bool);
 }

@@ -6,7 +6,7 @@ interface IVRFInterface {
 }
 
 contract TestVRF is IVRFInterface {
-    function requestRandomWords(uint32 numWords) pure external override returns (uint256) {
+    function requestRandomWords(uint32 numWords) external pure override returns (uint256) {
         return uint256(numWords);
     }
 }

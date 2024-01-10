@@ -1,27 +1,86 @@
-import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
-import { subtask, task } from "hardhat/config";
-
+import { task } from "hardhat/config";
+import { arbitrum, arbitrumSepolia, sepolia } from "viem/chains";
 import { compareLastTwoReports } from "./scripts/compare_reports";
 import { printLastReport } from "./scripts/print_report";
 import { getReportPathForCommit } from "./scripts/utils";
 import { writeReports } from "./scripts/write_reports";
-
-import type { HardhatUserConfig } from "hardhat/config";
-
 import "dotenv/config";
-import "@nomiclabs/hardhat-ethers";
+
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
-import "solidity-coverage";
 
-// Filter Reference Contracts
-subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
-  const paths = await runSuper();
+import type { HardhatUserConfig } from "hardhat/config";
+import { NetworksUserConfig } from "hardhat/types";
+import { CustomChain } from "@nomiclabs/hardhat-etherscan/dist/src/types";
 
-  return paths.filter((p: any) => !p.includes("contracts/reference/"));
-});
+//----------------------------------- for hardhat config ---------------------------------
+export type Chain = {
+  name: string;
+  id: number;
+  rpc: string;
+  scan?: string;
+  scan_api?: string;
+  scan_api_key?: string;
+  // default [`${process.env.PRIVATE_KEY}`]
+  accounts?: string[];
+};
+
+export function getApikey(supportChains: Chain[]) {
+  return supportChains.reduce<Record<string, string>>((record, chain) => {
+    record[chain.name] = chain.scan_api_key || "";
+    return record;
+  }, {});
+}
+
+export function getCustomChains(supportChains: Chain[]) {
+  return supportChains.map<CustomChain>((chain) => {
+    return { network: chain.name, chainId: chain.id, urls: { apiURL: chain.scan_api || "", browserURL: chain.scan || "" } };
+  });
+}
+
+export function getEtherscan(supportChains: Chain[]) {
+  return { apiKey: getApikey(supportChains), customChains: getCustomChains(supportChains) };
+}
+
+export function getNetworks(supportChains: Chain[]): NetworksUserConfig {
+  return supportChains.reduce<NetworksUserConfig>((nets, chain) => {
+    nets[chain.name] = {
+      url: chain.rpc,
+      accounts: chain.accounts || [`${process.env.PRIVATE_KEY}`],
+    };
+    return nets;
+  }, {});
+}
+
+const schains: Chain[] = [
+  {
+    name: "arbitrum",
+    id: arbitrum.id,
+    rpc: "https://arbitrum-one.public.blastapi.io",
+    scan: "https://arbiscan.io/",
+    scan_api: '"https://api.arbiscan.io/api',
+    scan_api_key: process.env.ARBSCAN_KEY,
+  },
+  {
+    name: "arbitrum_sepolia",
+    id: arbitrumSepolia.id,
+    rpc: "https://arbitrum-sepolia.public.blastapi.io",
+    scan: "https://sepolia.arbiscan.io/",
+    scan_api: "https://api-sepolia.arbiscan.io/api",
+    scan_api_key: process.env.ARBSCAN_KEY,
+  },
+  {
+    name: "sepolia",
+    id: sepolia.id,
+    rpc: "https://eth-sepolia.public.blastapi.io",
+    scan: "https://sepolia.etherscan.io",
+    scan_api: "https://api-sepolia.etherscan.io/api",
+    scan_api_key: process.env.ETHERSCAN_KEY,
+  },
+];
 
 task("write-reports", "Write pending gas reports").setAction(async (taskArgs, hre) => {
   writeReports(hre);
@@ -85,48 +144,7 @@ const config: HardhatUserConfig = {
         },
       },
     ],
-    overrides: {
-      "contracts/conduit/Conduit.sol": {
-        version: "0.8.14",
-        settings: {
-          viaIR: true,
-          optimizer: {
-            enabled: true,
-            runs: 10000,
-          },
-        },
-      },
-      "contracts/conduit/ConduitController.sol": {
-        version: "0.8.14",
-        settings: {
-          viaIR: true,
-          optimizer: {
-            enabled: true,
-            runs: 10000,
-          },
-        },
-      },
-      "contracts/helpers/TransferHelper.sol": {
-        version: "0.8.14",
-        settings: {
-          viaIR: true,
-          optimizer: {
-            enabled: true,
-            runs: 10000,
-          },
-        },
-      },
-      "contracts/helpers/order-validator": {
-        version: "0.8.17",
-        settings: {
-          viaIR: false,
-          optimizer: {
-            enabled: true,
-            runs: 1,
-          },
-        },
-      },
-    },
+    overrides: {},
   },
   networks: {
     hardhat: {
@@ -138,18 +156,7 @@ const config: HardhatUserConfig = {
     verificationNetwork: {
       url: process.env.NETWORK_RPC ?? "",
     },
-    sepolia: {
-      url: "https://eth-sepolia.public.blastapi.io",
-      accounts: [`${process.env.PRIVATE_KEY}`],
-    },
-    arb: {
-      url: "https://arbitrum-one.public.blastapi.io",
-      accounts: [`${process.env.PRIVATE_KEY}`],
-    },
-    arb_sepolia: {
-      url: "https://arbitrum-sepolia.public.blastapi.io",
-      accounts: [`${process.env.PRIVATE_KEY}`],
-    },
+    ...getNetworks(schains),
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -157,41 +164,9 @@ const config: HardhatUserConfig = {
     outputFile: getReportPathForCommit(),
     noColors: true,
   },
-  etherscan: {
-    apiKey: {
-      arb: process.env.ARBSCAN_KEY || "",
-      arb_sepolia: process.env.ARBSCAN_KEY || "",
-      sepolia: process.env.ETHERSCAN_KEY || "",
-    },
-    customChains: [
-      {
-        network: "arb",
-        chainId: 42161,
-        urls: {
-          apiURL: "https://api.arbiscan.io/api",
-          browserURL: "https://arbiscan.io/",
-        },
-      },
-      {
-        network: "arb_sepolia",
-        chainId: 421614,
-        urls: {
-          apiURL: "https://api-sepolia.arbiscan.io/api",
-          browserURL: "https://sepolia.arbiscan.io/",
-        },
-      },
-      {
-        network: "sepolia",
-        chainId: 11155111,
-        urls: {
-          apiURL: "https://api-sepolia.etherscan.io/api",
-          browserURL: "https://sepolia.etherscan.io/",
-        },
-      },
-    ],
-  },
   // specify separate cache for hardhat, since it could possibly conflict with foundry's
   paths: { cache: "hh-cache" },
+  etherscan: getEtherscan(schains),
 };
 
 export default config;

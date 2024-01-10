@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { SmeGasManager } from "../typechain-types";
-import { randomHex } from "./utils/encoding";
-import { faucet } from "./utils/faucet";
+import { randomHex } from "./utilsv2/encoding";
+import { faucet } from "./utilsv2/faucet";
 const { parseEther } = ethers.utils;
 
 describe("Gas manager tests", function () {
@@ -23,8 +23,8 @@ describe("Gas manager tests", function () {
   });
 
   it("Request match work", async () => {
-    const gasPrice = await gasManager.gasFee();
     const hashes = [randomHex(), randomHex()];
+    const gasPrice = (await gasManager.gasFee()).mul(hashes.length);
     await expect(gasManager.connect(maker).requestMatchOrder(hashes, { value: gasPrice }))
       .to.changeEtherBalances([maker, gasManager.address], [-gasPrice.toString(), gasPrice])
       .emit(gasManager, "RequestedMatch")
@@ -32,8 +32,8 @@ describe("Gas manager tests", function () {
   });
 
   it("Request match work of value > gasFee", async () => {
-    const gasPrice = await gasManager.gasFee();
     const hashes = [randomHex(), randomHex()];
+    const gasPrice = (await gasManager.gasFee()).mul(hashes.length);
     const morethan = parseEther("0.001").add(gasPrice);
     await expect(gasManager.connect(maker).requestMatchOrder(hashes, { value: morethan }))
       .to.changeEtherBalances([maker, gasManager.address], [-gasPrice, gasPrice])
@@ -42,8 +42,8 @@ describe("Gas manager tests", function () {
   });
 
   it("Request revert of value < gasFee", async () => {
-    const gasPrice = await gasManager.gasFee();
     const hashes = [randomHex(), randomHex()];
+    const gasPrice = (await gasManager.gasFee()).mul(hashes.length);
     await expect(gasManager.connect(maker).requestMatchOrder(hashes, { value: gasPrice.sub(1000) })).to.be.rejectedWith(
       "",
       "Should error of value < gasFee"

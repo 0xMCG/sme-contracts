@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { IERC721Receiver } from "seaport-types/src/interfaces/IERC721Receiver.sol";
+import { IERC721Receiver } from "./../interfaces/IERC721Receiver.sol";
 
 contract ERC721ReceiverMock is IERC721Receiver {
     enum Error {
@@ -14,13 +14,7 @@ contract ERC721ReceiverMock is IERC721Receiver {
     bytes4 private immutable _retval;
     Error private immutable _error;
 
-    event Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes data,
-        uint256 gas
-    );
+    event Received(address operator, address from, uint256 tokenId, bytes data, uint256 gas);
 
     constructor(bytes4 retval, Error error) {
         _retval = retval;

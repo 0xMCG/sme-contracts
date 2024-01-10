@@ -4,17 +4,17 @@ module.exports = {
       files: "*.sol",
       options: {
         tabWidth: 4,
-        printWidth: 80,
+        printWidth: 120,
         bracketSpacing: true,
         compiler: "0.8.17",
       },
     },
-    { 
-      files: "*.ts" ,
+    {
+      files: "*.ts",
       options: {
         tabWidth: 2,
         printWidth: 140,
       },
-    }
+    },
   ],
 };

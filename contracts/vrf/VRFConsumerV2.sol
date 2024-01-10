@@ -5,22 +5,14 @@ pragma solidity ^0.8.7;
 // import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import {ISeaportContract} from "./ISeaportInterface.sol";
-import {
-    Execution,
-    Fulfillment,
-    Order,
-    ReceivedItem
-} from "seaport-types/src/lib/ConsiderationStructs.sol";
-import {
-    AccumulatorDisarmed
-} from "seaport-types/src/lib/ConsiderationConstants.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 // import {Executor} from "seaport-core/lib/Executor.sol";
 /**
  * @title The VRFConsumerV2 contract
  * @notice A contract that gets random values from Chainlink VRF V2
  */
-contract VRFConsumerV2 is VRFConsumerBaseV2 {
+contract VRFConsumerV2 is VRFConsumerBaseV2, AccessControl {
     VRFCoordinatorV2Interface immutable COORDINATOR;
     // LinkTokenInterface immutable LINKTOKEN;
     // ISeaportContract immutable Seaport;
@@ -39,11 +31,10 @@ contract VRFConsumerV2 is VRFConsumerBaseV2 {
     // this limit based on the network that you select, the size of the request,
     // and the processing of the callback request in the fulfillRandomWords()
     // function.
-    uint32 immutable s_callbackGasLimit = 1000000;
+    uint32 internal s_callbackGasLimit = 2000000;
 
     // The default is 3, but you can set this higher.
-    uint16 immutable s_requestConfirmations = 1;
-
+    uint16 internal s_requestConfirmations = 1;
 
     // // For this example, retrieve 2 random values in one request.
     // // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
@@ -53,10 +44,11 @@ contract VRFConsumerV2 is VRFConsumerBaseV2 {
     uint256 public s_requestId;
     address s_owner;
 
-
     uint256 immutable precision = 1000;
     uint256[] public numerators;
     uint256 immutable demonator = 10000;
+
+    bytes32 public constant MARKET = keccak256("MARKET");
 
     event ReturnedRandomness(uint256 requestId, uint256[] randomWords);
 
@@ -67,28 +59,29 @@ contract VRFConsumerV2 is VRFConsumerBaseV2 {
      * @param vrfCoordinator - coordinator, check https://docs.chain.link/docs/vrf-contracts/#configurations
      * @param keyHash - the gas lane to use, which specifies the maximum gas price to bump to
      */
-    constructor(
-        uint64 subscriptionId,
-        address vrfCoordinator,
-        // address link,
-        bytes32 keyHash
-        // address conduitController
-    ) VRFConsumerBaseV2(vrfCoordinator){
+    constructor(uint64 subscriptionId, address vrfCoordinator, bytes32 keyHash) VRFConsumerBaseV2(vrfCoordinator) {
         COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
         // LINKTOKEN = LinkTokenInterface(link);
         s_keyHash = keyHash;
         s_owner = msg.sender;
         s_subscriptionId = subscriptionId;
-        // Seaport = ISeaportContract(0x5315046948f1a9ead4E29f3cdd1a957bc71BEAcE);
 
-        // initLookups();
+        _grantRole(DEFAULT_ADMIN_ROLE, tx.origin);
+    }
+
+    function setCallbackGasLimit(uint32 limit) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        s_callbackGasLimit = limit;
+    }
+
+    function setConfirms(uint16 confirms) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        s_requestConfirmations = confirms;
     }
 
     /**
      * @notice Requests randomness
      * Assumes the subscription is funded sufficiently; "Words" refers to unit of data in Computer Science
      */
-    function requestRandomWords(uint32 s_numWords) external returns (uint256) {
+    function requestRandomWords(uint32 s_numWords) external onlyRole(MARKET) returns (uint256) {
         // Will revert if subscription is not set and funded.
         s_requestId = COORDINATOR.requestRandomWords(
             s_keyHash,
@@ -106,10 +99,7 @@ contract VRFConsumerV2 is VRFConsumerBaseV2 {
      * @param requestId - id of the request
      * @param randomWords - array of random results from VRF Coordinator
      */
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords)
-        internal
-        override
-    {
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         s_randomWords = randomWords;
         emit ReturnedRandomness(requestId, randomWords);
     }
