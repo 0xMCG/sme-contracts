@@ -29,6 +29,9 @@ contract SmeMarket is Ownable, ReentrancyGuard, ConsiderationBase {
     event PreparedOrder(uint256 requestId, bytes32[] hashes);
     string constant NAME = "SmeMarket";
     address private _vrf_controller;
+
+    uint256 public cancelPreparedTime = 3 hours;
+
     mapping(uint256 => bytes32[]) private originalOrderHashes;
 
     mapping(address => bool) private members;
@@ -36,6 +39,10 @@ contract SmeMarket is Ownable, ReentrancyGuard, ConsiderationBase {
     constructor() ConsiderationBase() {
         _transferOwnership(tx.origin);
         _vrf_controller = address(0xC619D985a88e341B618C23a543B8Efe2c55D1b37);
+    }
+
+    function setCancelPreparedTime(uint256 time) external onlyOwner {
+        cancelPreparedTime = time;
     }
 
     /**
@@ -72,6 +79,35 @@ contract SmeMarket is Ownable, ReentrancyGuard, ConsiderationBase {
         originalOrderHashes[requestId] = orderHashes;
         emit PreparedOrder(requestId, orderHashes);
         return requestId;
+    }
+
+    function cancelPrepared(uint256 requestId, AdvancedOrder[] calldata orders) external {
+        bytes32[] memory existingOrderHahes = originalOrderHashes[requestId];
+        uint256 orderSize = orders.length;
+        require(existingOrderHahes.length > 0, "requestId not find");
+        require(existingOrderHahes.length == orders.length, "orders size error");
+        unchecked {
+            for (uint i = 0; i < orderSize; ++i) {
+                AdvancedOrder memory order = orders[i];
+                bytes32 storeHash = existingOrderHahes[i];
+                bytes32 hash = _assertConsiderationLengthAndGetOrderHash(order.parameters);
+                require(storeHash == hash, "Order hash not match");
+                (uint120 numerator, uint120 denominator, uint256 time) = _getLastMatchStatus(hash);
+                require(time > 0 && (block.timestamp - time) > cancelPreparedTime, "Wait cancel prepared time");
+                if (order.parameters.consideration.length > 0) {
+                    OfferItem[] memory offers = order.parameters.offer;
+                    address payable recipent = payable(order.parameters.offerer);
+                    for (uint j = 0; j < offers.length; ++j) {
+                        OfferItem memory item = offers[j];
+                        item.endAmount = _getFraction(numerator, denominator, item.endAmount);
+                        _transferFromPool(_offerToReceived(item, recipent, true), address(this));
+                    }
+                    _restoreOriginalStatus(hash);
+                    _clearLastMatchStatus(hash);
+                }
+            }
+            delete originalOrderHashes[requestId];
+        }
     }
 
     /**
@@ -436,40 +472,6 @@ contract SmeMarket is Ownable, ReentrancyGuard, ConsiderationBase {
     }
 
     /**
-     * @dev Internal function to emit an OrdersMatched event using the same
-     *      memory region as the existing order hash array.
-     *
-     * @param orderHashes An array of order hashes to include as an argument for
-     *                    the OrdersMatched event.
-     */
-    function _emitOrdersMatched(bytes32[] memory orderHashes) internal {
-        assembly {
-            // Load the array length from memory.
-            let length := mload(orderHashes)
-
-            // Get the full size of the event data - one word for the offset,
-            // one for the array length and one per hash.
-            let dataSize := add(TwoWords, shl(OneWordShift, length))
-
-            // Get pointer to start of data, reusing word before array length
-            // for the offset.
-            let dataPointer := sub(orderHashes, OneWord)
-
-            // Cache the existing word in memory at the offset pointer.
-            let cache := mload(dataPointer)
-
-            // Write an offset of 32.
-            mstore(dataPointer, OneWord)
-
-            // Emit the OrdersMatched event.
-            log1(dataPointer, dataSize, OrdersMatchedTopic0)
-
-            // Restore the cached word.
-            mstore(dataPointer, cache)
-        }
-    }
-
-    /**
      * @dev Internal function to match an arbitrary number of full or partial
      *      orders, each with an arbitrary number of items for offer and
      *      consideration, supplying criteria resolvers containing specific
@@ -561,7 +563,7 @@ contract SmeMarket is Ownable, ReentrancyGuard, ConsiderationBase {
                 OrderParameters memory orderParameters = advancedOrder.parameters;
                 bytes32 orderHash = _assertConsiderationLengthAndGetOrderHash(orderParameters);
                 require(checkIfOrderHashesExists(existingOrderHahes, orderHash), Error_OrdersForRqurestId);
-                (uint256 numerator, uint256 denominator) = _getLastMatchStatus(orderHash);
+                (uint256 numerator, uint256 denominator, ) = _getLastMatchStatus(orderHash);
                 (bool hasLucky, uint256 luckyNumerator, uint256 luckyDenominator) = checkIfProbilityExists(
                     orderProbility,
                     orderHash

@@ -423,48 +423,7 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
       .withArgs(marketplaceContract.address, maker.address, nftId);
   });
 
-  it("Partial order match bid (Only supports selling one ERC721 at a time)", async () => {
-    const nftId = await mint721(taker);
-    // maker
-    await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
-    const makerOrder = await createOrder(
-      maker,
-      ethers.constants.AddressZero,
-      [getTestItem20(parseEther("32"), parseEther("40"))],
-      [getTestItem721WithCriteria(nftId, 4, 4, maker.address)],
-      1 // Partial open
-    );
-    // taker
-    await set721ApprovalForAll(taker, marketplaceContract.address);
-    const takerOrder = await createOrder(
-      taker,
-      ethers.constants.AddressZero,
-      [getTestItem721(nftId, 1, 1)],
-      [getTestItem20(parseEther("8"), parseEther("10"), taker.address)],
-      0
-    );
-    // backend
-    makerOrder.order.numerator = 1; // partial 分子
-    makerOrder.order.denominator = 4; // partial 分母
-    const reqIdOrNumWords = 1;
-    await expect(
-      marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords)
-    ).to.changeTokenBalance(testERC20, marketplaceContract.address, parseEther("10"));
-
-    await expect(
-      marketplaceContract
-        .connect(member)
-        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
-        ])
-    )
-      .to.emit(marketplaceContract, "MatchSuccessOrNot")
-      .withArgs(reqIdOrNumWords, true)
-      .changeTokenBalances(testERC20, [taker.address, maker.address], [parseEther("9"), parseEther("1")])
-      .emit(testERC721, "Transfer")
-      .withArgs(marketplaceContract.address, maker.address, nftId);
-  });
-  it("Partial order match bid (mulit 721 on once time should revert)", async () => {
+  it("Partial order match bid", async () => {
     const nftId = await mint721(taker);
     const nftId2 = await mint721(taker);
     // maker
@@ -481,7 +440,7 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     const takerOrder = await createOrder(
       taker,
       ethers.constants.AddressZero,
-      [getTestItem721(nftId, 1, 1), getTestItem721(nftId2, 1, 1)],
+      [getTestItem721(nftId), getTestItem721(nftId2)],
       [getTestItem20(parseEther("16"), parseEther("20"), taker.address)],
       0
     );
@@ -494,18 +453,25 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     ).to.changeTokenBalance(testERC20, marketplaceContract.address, parseEther("20"));
 
     await expect(
-      marketplaceContract
-        .connect(member)
-        .matchOrdersWithRandom([makerOrder.order, takerOrder.order], fufillments, reqIdOrNumWords, [
-          { orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 },
-        ])
+      marketplaceContract.connect(member).matchOrdersWithRandom(
+        [makerOrder.order, takerOrder.order],
+        [
+          ...fufillments,
+          {
+            offerComponents: [{ orderIndex: 1, itemIndex: 1 }],
+            considerationComponents: [{ orderIndex: 0, itemIndex: 0 }],
+          },
+        ],
+        reqIdOrNumWords,
+        [{ orderHash: takerOrder.orderHash, numerator: 1, denominator: 2 }]
+      )
     )
       .to.emit(marketplaceContract, "MatchSuccessOrNot")
-      .withArgs(reqIdOrNumWords, false)
-      .changeTokenBalances(testERC20, [taker.address, maker.address], [parseEther("0"), parseEther("20")])
+      .withArgs(reqIdOrNumWords, true)
+      .changeTokenBalances(testERC20, [taker.address, maker.address], [parseEther("18"), parseEther("2")])
       .emit(testERC721, "Transfer")
-      .withArgs(marketplaceContract.address, taker.address, nftId)
+      .withArgs(marketplaceContract.address, maker.address, nftId)
       .emit(testERC721, "Transfer")
-      .withArgs(marketplaceContract.address, taker.address, nftId2);
+      .withArgs(marketplaceContract.address, maker.address, nftId2)
   });
 });

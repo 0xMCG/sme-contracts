@@ -101,10 +101,9 @@ contract ConsiderationBase is
         return (orderStatus.isValidated, orderStatus.isCancelled, orderStatus.numerator, orderStatus.denominator);
     }
 
-    function _getLastMatchStatus(bytes32 orderHash) internal view returns (uint120 numerator, uint120 denominator) {
+    function _getLastMatchStatus(bytes32 orderHash) internal view returns (uint120 numerator, uint120 denominator, uint256 timestamp) {
         LastMatchStatus storage lastMatchStatus = _lastMatchStatus[orderHash];
-
-        return (lastMatchStatus.numerator, lastMatchStatus.denominator);
+        return (lastMatchStatus.numerator, lastMatchStatus.denominator, lastMatchStatus.timestamp);
     }
 
     function _storeLastMatchStatus(bytes32 orderHash, uint120 numerator, uint120 denominator) internal {
