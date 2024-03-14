@@ -78,9 +78,12 @@
     "cookiejar": ">=2.1.4"
   },
   "scripts": {
-    "build": "yarn clean; hardhat compile --config ./hardhat.config.ts; yarn show:headroom;",
-    "build:quick": "hardhat compile --config ./hardhat.config.ts; yarn show:headroom;",
-    "build:nospec": "yarn clean; NO_SPECIALIZER=true hardhat compile --config ./hardhat.config.ts; yarn show:headroom;",
+    "deploy": "yarn build; hardhat run scripts/deployer.ts --network ",
+    "deploy:quick": "yarn build:quick; hardhat run scripts/deployer.ts --network ",
+    "clean": "hardhat clean;",
+    "build": "yarn clean; hardhat compile --config ./hardhat.config.ts;",
+    "build:quick": "hardhat compile --config ./hardhat.config.ts;",
+    "build:nospec": "yarn clean; NO_SPECIALIZER=true hardhat compile --config ./hardhat.config.ts;",
     "test": "yarn clean; hardhat test --config ./hardhat.config.ts",
     "test:quick": "hardhat test --config ./hardhat.config.ts",
     "test:nospec": "NO_SPECIALIZER=true hardhat test --config ./hardhat.config.ts",
@@ -97,7 +100,6 @@
     "lint:fix": "yarn lint:fix:format && yarn lint:fix:eslint",
     "lint:fix:format": "prettier --write **.{sol,js,ts}",
     "lint:fix:eslint": "eslint --fix . --ext js,ts",
-    "show:headroom": "jq -r '.deployedBytecode' artifacts/contracts/SmeMarket.sol/SmeMarket.json | tr -d '\n' | wc -m | awk '{print 24577 - ($1 - 2)/2}'",
     "test:fuzz": "forge test --mp test/foundry/new/FuzzMain.t.sol",
     "test:fuzz:concrete": "forge test --mt test_concrete",
     "test:fuzz:metrics": "yarn ts-node scripts/plot_metrics.ts",

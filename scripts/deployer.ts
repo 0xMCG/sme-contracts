@@ -11,11 +11,6 @@ const VRFConfig: {
     subId: 7066,
     keyHash: "0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c",
   },
-  arb_sepolia: {
-    coor: "0x50d47e4142598E3411aA864e08a44284e471AC6f",
-    subId: 36,
-    keyHash: "0x027f94ff1465b3525f9fc03e9ff7d6d2c0953482246dd6ae07570c45d6631414",
-  },
   arbitrum_sepolia: {
     coor: "0x50d47e4142598E3411aA864e08a44284e471AC6f",
     subId: 36,

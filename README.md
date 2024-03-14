@@ -31,6 +31,16 @@ yarn test
 ```bash
 yarn test:quick
 ```
+
+3.Deploy contracts
+need config .env
+PRIVATE_KEY=deployer private key    
+```bash
+// re build and deploy
+yarn deploy 
+// quick build and deploy
+yarn deploy:quick
+```
 ## License
 
 [MIT](LICENSE) Copyright 2023 Ozone Networks, Inc.
