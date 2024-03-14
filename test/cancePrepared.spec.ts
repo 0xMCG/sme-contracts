@@ -99,7 +99,10 @@ describe(`Cancel Prepared (SmeMarket v${VERSION})`, function () {
     const reqIdOrNumWords = 1;
     // backend
     await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
-    await time.increase(time.duration.hours(3))
+    await expect(marketplaceContract.connect(maker).cancelPrepared(reqIdOrNumWords, [makerOrder.order, takerOrder.order])).rejectedWith(
+      "Wait cancel prepared time"
+    );
+    await time.increase(time.duration.hours(3));
     await expect(marketplaceContract.connect(maker).cancelPrepared(reqIdOrNumWords, [makerOrder.order, takerOrder.order]))
       .changeTokenBalance(testERC20_2, maker.address, parseEther("8"))
       .changeTokenBalance(testERC20, taker.address, parseEther("10"));
@@ -124,7 +127,7 @@ describe(`Cancel Prepared (SmeMarket v${VERSION})`, function () {
     const reqIdOrNumWords = 1;
     // backend
     await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
-    await time.increase(time.duration.hours(3))
+    await time.increase(time.duration.hours(3));
     await expect(marketplaceContract.connect(maker).cancelPrepared(reqIdOrNumWords, [takerOrder.order, makerOrder.order])).revertedWith(
       "Order hash not match"
     );
