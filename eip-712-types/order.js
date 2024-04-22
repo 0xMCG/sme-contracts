@@ -1,15 +1,15 @@
 const orderType = {
   OrderComponents: [
     { name: "offerer", type: "address" },
-    { name: "zone", type: "address" },
+    // { name: "zone", type: "address" },
     { name: "offer", type: "OfferItem[]" },
     { name: "consideration", type: "ConsiderationItem[]" },
     { name: "orderType", type: "uint8" },
     { name: "startTime", type: "uint256" },
     { name: "endTime", type: "uint256" },
-    { name: "zoneHash", type: "bytes32" },
+    // { name: "zoneHash", type: "bytes32" },
     { name: "salt", type: "uint256" },
-    { name: "conduitKey", type: "bytes32" },
+    // { name: "conduitKey", type: "bytes32" },
     { name: "counter", type: "uint256" },
   ],
   OfferItem: [

@@ -83,7 +83,7 @@ describe(`Cancel Prepared (SmeMarket v${VERSION})`, function () {
     // maker
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
+      
       [getTestItem20(parseEther("8"), parseEther("8"), undefined, testERC20_2.address)],
       [getTestItem20(parseEther("8"), parseEther("10"), maker.address, testERC20.address)],
       0
@@ -91,7 +91,7 @@ describe(`Cancel Prepared (SmeMarket v${VERSION})`, function () {
     // taker
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
+      
       [getTestItem20(parseEther("8"), parseEther("10"), undefined, testERC20.address)],
       [getTestItem20(parseEther("8"), parseEther("8"), taker.address, testERC20_2.address)],
       0
@@ -111,7 +111,7 @@ describe(`Cancel Prepared (SmeMarket v${VERSION})`, function () {
     // maker
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
+      
       [getTestItem20(parseEther("8"), parseEther("8"), undefined, testERC20_2.address)],
       [getTestItem20(parseEther("8"), parseEther("10"), maker.address, testERC20.address)],
       0
@@ -119,7 +119,7 @@ describe(`Cancel Prepared (SmeMarket v${VERSION})`, function () {
     // taker
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
+      
       [getTestItem20(parseEther("8"), parseEther("10"), undefined, testERC20.address)],
       [getTestItem20(parseEther("8"), parseEther("8"), taker.address, testERC20_2.address)],
       0

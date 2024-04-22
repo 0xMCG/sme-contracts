@@ -16,17 +16,14 @@ import { CalldataPointer, MemoryPointer } from "./PointerLibraries.sol";
  *      be received by their respective recipient.
  */
 struct OrderComponents {
-    address offerer;
-    address zone;
-    OfferItem[] offer;
-    ConsiderationItem[] consideration;
-    OrderType orderType;
-    uint256 startTime;
-    uint256 endTime;
-    bytes32 zoneHash;
-    uint256 salt;
-    bytes32 conduitKey;
-    uint256 counter;
+    address offerer;  // 0x00
+    OfferItem[] offer; // 0x20
+    ConsiderationItem[] consideration; // 0x40
+    OrderType orderType; // 0x60
+    uint256 startTime; // 0x80
+    uint256 endTime;  // 0xa0
+    uint256 salt;     // 0xc0
+    uint256 counter;  // 0xe0
 }
 
 /**
@@ -103,17 +100,14 @@ struct AdditionalRecipient {
  */
 struct OrderParameters {
     address offerer; // 0x00
-    address zone; // 0x20
-    OfferItem[] offer; // 0x40
-    ConsiderationItem[] consideration; // 0x60
-    OrderType orderType; // 0x80
-    uint256 startTime; // 0xa0
-    uint256 endTime; // 0xc0
-    bytes32 zoneHash; // 0xe0
-    uint256 salt; // 0x100
-    bytes32 conduitKey; // 0x120
-    uint256 totalOriginalConsiderationItems; // 0x140
-    // offer.length                          // 0x160
+    OfferItem[] offer; // 0x20
+    ConsiderationItem[] consideration; // 0x40
+    OrderType orderType; // 0x60
+    uint256 startTime; // 0x80
+    uint256 endTime; // 0xa0
+    uint256 salt; // 0xc0
+    uint256 totalOriginalConsiderationItems; // 0xe0
+    // offer.length                          // 0xd0
 }
 
 /**
@@ -224,7 +218,7 @@ struct ZoneParameters {
     bytes32[] orderHashes;
     uint256 startTime;
     uint256 endTime;
-    bytes32 zoneHash;
+    // bytes32 zoneHash;
 }
 
 /**
@@ -633,18 +627,6 @@ library StructPointers {
         }
     }
 
-    /**
-     * @dev Get a MemoryPointer from ZoneParameters.
-     *
-     * @param obj The ZoneParameters object.
-     *
-     * @return ptr The MemoryPointer.
-     */
-    function toMemoryPointer(ZoneParameters memory obj) internal pure returns (MemoryPointer ptr) {
-        assembly {
-            ptr := obj
-        }
-    }
 
     /**
      * @dev Get a CalldataPointer from ZoneParameters.

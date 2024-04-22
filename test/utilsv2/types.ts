@@ -41,15 +41,15 @@ export type ConsiderationItem = {
 
 export type OrderParameters = {
   offerer: string;
-  zone: string;
+  // zone: string;
   offer: OfferItem[];
   consideration: ConsiderationItem[];
   orderType: number;
   startTime: string | BigNumber | number;
   endTime: string | BigNumber | number;
-  zoneHash: string;
+  // zoneHash: string;
   salt: string;
-  conduitKey: string;
+  // conduitKey: string;
   totalOriginalConsiderationItems: string | BigNumber | number;
 };
 

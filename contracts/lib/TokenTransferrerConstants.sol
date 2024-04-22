@@ -75,16 +75,7 @@ uint256 constant ERC1155_safeTransferFrom_data_length_ptr = 0xa4;
 uint256 constant ERC1155_safeTransferFrom_length = 0xc4; // 4 + 32 * 6 == 196
 uint256 constant ERC1155_safeTransferFrom_data_length_offset = 0xa0;
 
-// abi.encodeWithSignature(
-//     "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"
-// )
-uint256 constant ERC1155_safeBatchTransferFrom_signature = (
-    0x2eb2c2d600000000000000000000000000000000000000000000000000000000
-);
 
-// bytes4 constant ERC1155_safeBatchTransferFrom_selector = bytes4(
-//     bytes32(ERC1155_safeBatchTransferFrom_signature)
-// );
 
 uint256 constant ERC721_transferFrom_signature = (0x23b872dd00000000000000000000000000000000000000000000000000000000);
 uint256 constant ERC721_transferFrom_sig_ptr = 0x0;
@@ -135,45 +126,6 @@ uint256 constant TokenTransferGenericFailure_error_length = 0xa4;
 uint256 constant ExtraGasBuffer = 0x20;
 uint256 constant CostPerWord = 0x3;
 uint256 constant MemoryExpansionCoefficientShift = 0x9;
-
-// Values are offset by 32 bytes in order to write the token to the beginning
-// in the event of a revert
-uint256 constant BatchTransfer1155Params_ptr = 0x24;
-uint256 constant BatchTransfer1155Params_ids_head_ptr = 0x64;
-uint256 constant BatchTransfer1155Params_amounts_head_ptr = 0x84;
-uint256 constant BatchTransfer1155Params_data_head_ptr = 0xa4;
-uint256 constant BatchTransfer1155Params_data_length_basePtr = 0xc4;
-uint256 constant BatchTransfer1155Params_calldata_baseSize = 0xc4;
-
-uint256 constant BatchTransfer1155Params_ids_length_ptr = 0xc4;
-
-uint256 constant BatchTransfer1155Params_ids_length_offset = 0xa0;
-// uint256 constant BatchTransfer1155Params_amounts_length_baseOffset = 0xc0;
-// uint256 constant BatchTransfer1155Params_data_length_baseOffset = 0xe0;
-
-uint256 constant ConduitBatch1155Transfer_usable_head_size = 0x80;
-
-uint256 constant ConduitBatch1155Transfer_from_offset = 0x20;
-uint256 constant ConduitBatch1155Transfer_ids_head_offset = 0x60;
-// uint256 constant ConduitBatch1155Transfer_amounts_head_offset = 0x80;
-uint256 constant ConduitBatch1155Transfer_ids_length_offset = 0xa0;
-uint256 constant ConduitBatch1155Transfer_amounts_length_baseOffset = 0xc0;
-// uint256 constant ConduitBatch1155Transfer_calldata_baseSize = 0xc0;
-
-// Note: abbreviated version of above constant to adhere to line length limit.
-uint256 constant ConduitBatchTransfer_amounts_head_offset = 0x80;
-
-uint256 constant Invalid1155BatchTransferEncoding_ptr = 0x00;
-uint256 constant Invalid1155BatchTransferEncoding_length = 0x04;
-uint256 constant Invalid1155BatchTransferEncoding_selector = (
-    0xeba2084c00000000000000000000000000000000000000000000000000000000
-);
-
-uint256 constant ERC1155BatchTransferGenericFailure_error_signature = (
-    0xafc445e200000000000000000000000000000000000000000000000000000000
-);
-uint256 constant ERC1155BatchTransferGenericFailure_token_ptr = 0x04;
-uint256 constant ERC1155BatchTransferGenericFailure_ids_offset = 0xc0;
 
 /*
  *  error BadReturnValueFromERC20OnTransfer(

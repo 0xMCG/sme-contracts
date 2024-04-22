@@ -73,53 +73,11 @@ export const marketplaceFixture = async (create2Factory: ImmutableCreate2Factory
     return signature;
   };
 
-  const signBulkOrder = async (
-    orderComponents: OrderComponents[],
-    signer: Wallet | Contract,
-    startIndex = 0,
-    height?: number,
-    extraCheap?: boolean
-  ) => {
-    const tree = getBulkOrderTree(orderComponents, startIndex, height);
-    const bulkOrderType = tree.types;
-    const chunks = tree.getDataToSign();
-    let signature = await signer._signTypedData(domainData, bulkOrderType, {
-      tree: chunks,
-    });
-
-    if (extraCheap) {
-      signature = convertSignatureToEIP2098(signature);
-    }
-
-    const proofAndSignature = tree.getEncodedProofAndSignature(startIndex, signature);
-
-    const orderHash = tree.getBulkOrderHash();
-
-    const { domainSeparator } = await marketplaceContract.information();
-    const digest = keccak256(`0x1901${domainSeparator.slice(2)}${orderHash.slice(2)}`);
-    const recoveredAddress = recoverAddress(digest, signature);
-
-    expect(recoveredAddress).to.equal(signer.address);
-
-    // Verify each individual order
-    for (const components of orderComponents) {
-      const individualOrderHash = await getAndVerifyOrderHash(components);
-      const digest = keccak256(`0x1901${domainSeparator.slice(2)}${individualOrderHash.slice(2)}`);
-      const individualOrderSignature = await signer._signTypedData(domainData, orderType, components);
-      const recoveredAddress = recoverAddress(digest, individualOrderSignature);
-      expect(recoveredAddress).to.equal(signer.address);
-    }
-
-    return proofAndSignature;
-  };
-
   const createOrder = async (
     offerer: Wallet | Contract,
-    zone: undefined | string = undefined,
     offer: OfferItem[],
     consideration: ConsiderationItem[],
     orderType: number,
-    criteriaResolvers?: CriteriaResolver[],
     timeFlag?: string | null,
     signer?: Wallet,
     extraCheap = false,
@@ -128,8 +86,6 @@ export const marketplaceFixture = async (create2Factory: ImmutableCreate2Factory
     bulkSignatureHeight?: number,
     marketplace = marketplaceContract
   ) => {
-    const zoneHash = constants.HashZero;
-    const conduitKey = constants.HashZero;
     const counter = await marketplace.getCounter(offerer.address);
 
     const salt =  '0x8460862738';
@@ -139,14 +95,14 @@ export const marketplaceFixture = async (create2Factory: ImmutableCreate2Factory
 
     const orderParameters = {
       offerer: offerer.address,
-      zone: constants.AddressZero,
+      // zone: constants.AddressZero,
       offer,
       consideration,
       totalOriginalConsiderationItems: consideration.length,
       orderType,
-      zoneHash,
+      // zoneHash,
       salt,
-      conduitKey,
+      // conduitKey,
       startTime,
       endTime,
     };
@@ -179,16 +135,6 @@ export const marketplaceFixture = async (create2Factory: ImmutableCreate2Factory
       extraData: "0x", // only used for advanced orders
     };
 
-    if (useBulkSignature) {
-      order.signature = await signBulkOrder([orderComponents], signer ?? offerer, bulkSignatureIndex, bulkSignatureHeight, extraCheap);
-
-      // Verify bulk signature length
-      expect(order.signature.slice(2).length / 2, "bulk signature length should be valid (98 < length < 837)")
-        .to.be.gt(98)
-        .and.lt(837);
-      expect((order.signature.slice(2).length / 2 - 67) % 32, "bulk signature length should be valid ((length - 67) % 32 < 2)").to.be.lt(2);
-    }
-
     // How much ether (at most) needs to be supplied when fulfilling the order
     const value = offer
       .map((x) => (x.itemType === 0 ? (x.endAmount.gt(x.startAmount) ? x.endAmount : x.startAmount) : toBN(0)))
@@ -214,7 +160,7 @@ export const marketplaceFixture = async (create2Factory: ImmutableCreate2Factory
     marketplaceContract,
     domainData,
     signOrder,
-    signBulkOrder,
+   
     createOrder,
   };
 };

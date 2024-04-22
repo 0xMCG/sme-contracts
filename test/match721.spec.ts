@@ -108,7 +108,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await set721ApprovalForAll(maker, marketplaceContract.address);
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId)],
       [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
       0
@@ -118,7 +117,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
       [getTestItem721(nftId, 1, 1, taker.address)],
       0
@@ -144,7 +142,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await set721ApprovalForAll(maker, marketplaceContract.address);
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId)],
       [getTestItem20(parseEther("8"), parseEther("10"), maker.address)],
       0
@@ -154,7 +151,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
     const takerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
       [getTestItem721(nftId, 1, 1, maker.address)],
       0
@@ -178,9 +174,8 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
-      [getTestItem721WithCriteria(ethers.constants.AddressZero, 1, 1, maker.address)],
+      [getTestItem721WithCriteria(0, 1, 1, maker.address)],
       0
     );
     // taker
@@ -188,7 +183,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await set721ApprovalForAll(taker, marketplaceContract.address);
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId, 1, 1)],
       [getTestItem20(parseEther("8"), parseEther("10"), taker.address)],
       0
@@ -217,9 +211,8 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
-      [getTestItem721WithCriteria(ethers.constants.AddressZero, 1, 1, maker.address)],
+      [getTestItem721WithCriteria(0, 1, 1, maker.address)],
       0
     );
     // taker
@@ -227,7 +220,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await set721ApprovalForAll(taker, marketplaceContract.address);
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId, 1, 1)],
       [getTestItem20(parseEther("8"), parseEther("10"), taker.address)],
       0
@@ -255,23 +247,11 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     const nftId = await mint721(maker);
     await set721ApprovalForAll(maker, marketplaceContract.address);
     const Zero = toBN("0");
-    const makerOrder = await createOrder(
-      maker,
-      ethers.constants.AddressZero,
-      [getTestItem721(nftId, 1, 1)],
-      [getTestItem20(Zero, parseEther("10"), maker.address)],
-      0
-    );
+    const makerOrder = await createOrder(maker, [getTestItem721(nftId, 1, 1)], [getTestItem20(Zero, parseEther("10"), maker.address)], 0);
 
     // taker
     await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
-    const takerOrder = await createOrder(
-      taker,
-      ethers.constants.AddressZero,
-      [getTestItem20(Zero, parseEther("9.5"))],
-      [getTestItem721(nftId, 1, 1, taker.address)],
-      0
-    );
+    const takerOrder = await createOrder(taker, [getTestItem20(Zero, parseEther("9.5"))], [getTestItem721(nftId, 1, 1, taker.address)], 0);
     const reqIdOrNumWords = 1;
     // backend
     await marketplaceContract.connect(member).prepare([makerOrder.order, takerOrder.order], [], [], reqIdOrNumWords);
@@ -294,7 +274,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     const Zero = toBN("0");
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId, 1, 1)],
       [getTestItem20(parseEther("9"), parseEther("10"), maker.address)],
       0
@@ -304,13 +283,12 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("9.2"))],
       [getTestItem721(nftId, 1, 1, taker.address)],
       0
     );
     // preminum
-    const preminumOrder = await createOrder(taker, ethers.constants.AddressZero, [getTestItem20(parseEther("1"), parseEther("1"))], [], 0);
+    const preminumOrder = await createOrder(taker, [getTestItem20(parseEther("1"), parseEther("1"))], [], 0);
 
     const reqIdOrNumWords = 1;
     // backend
@@ -341,7 +319,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     const subFee = (p: BigNumber) => p.sub(culFee(p));
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId, 1, 1)],
       [
         getTestItem20(subFee(parseEther("8")), subFee(parseEther("10")), maker.address),
@@ -354,7 +331,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(taker, marketplaceContract.address, parseEther("100"));
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
       [getTestItem721(nftId, 1, 1, taker.address)],
       0
@@ -387,7 +363,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("8"), parseEther("10"))],
       [getTestItem721(nftId, 1, 1, maker.address)],
       0
@@ -396,7 +371,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await set721ApprovalForAll(taker, marketplaceContract.address);
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId, 1, 1)],
       [
         getTestItem20(subFee(parseEther("8")), subFee(parseEther("10")), taker.address),
@@ -430,16 +404,14 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
     await mintAndApproveERC20(maker, marketplaceContract.address, parseEther("100"));
     const makerOrder = await createOrder(
       maker,
-      ethers.constants.AddressZero,
       [getTestItem20(parseEther("32"), parseEther("40"))],
-      [getTestItem721WithCriteria(nftId, 4, 4, maker.address)],
+      [getTestItem721WithCriteria(0, 4, 4, maker.address)],
       1 // Partial open
     );
     // taker
     await set721ApprovalForAll(taker, marketplaceContract.address);
     const takerOrder = await createOrder(
       taker,
-      ethers.constants.AddressZero,
       [getTestItem721(nftId), getTestItem721(nftId2)],
       [getTestItem20(parseEther("16"), parseEther("20"), taker.address)],
       0
@@ -472,6 +444,6 @@ describe(`Mathch tests (SmeMarket v${VERSION}) ERC20 <-> ERC721`, function () {
       .emit(testERC721, "Transfer")
       .withArgs(marketplaceContract.address, maker.address, nftId)
       .emit(testERC721, "Transfer")
-      .withArgs(marketplaceContract.address, maker.address, nftId2)
+      .withArgs(marketplaceContract.address, maker.address, nftId2);
   });
 });

@@ -38,9 +38,8 @@ interface ConsiderationEventsAndErrors {
      *
      * @param orderHash The hash of the cancelled order.
      * @param offerer   The offerer of the cancelled order.
-     * @param zone      The zone of the cancelled order.
      */
-    event OrderCancelled(bytes32 orderHash, address indexed offerer, address indexed zone);
+    event OrderCancelled(bytes32 orderHash, address indexed offerer);
 
     /**
      * @dev Emit an event whenever an order is explicitly validated. Note that

@@ -46,7 +46,7 @@ export const marketFixture = async (owner: Wallet) => {
     createTransferWithApproval,
   } = await tokensFixture(owner as any);
 
-  const { marketplaceContract, domainData, signOrder, signBulkOrder, createOrder } = await marketplaceFixture(
+  const { marketplaceContract, domainData, signOrder, createOrder } = await marketplaceFixture(
     create2Factory,
     chainId,
     owner
@@ -418,7 +418,7 @@ export const marketFixture = async (owner: Wallet) => {
       );
       expect(event.orderHash).to.equal(orderHash);
       expect(event.offerer).to.equal(order.parameters.offerer);
-      expect(event.zone).to.equal(order.parameters.zone);
+     
       expect(event.recipient).to.equal(recipient);
 
       const txMethod = (await tx).data.slice(0, 10);
@@ -440,7 +440,7 @@ export const marketFixture = async (owner: Wallet) => {
         expect(marketplaceContractOrdersMatchedEvents[0].orderHashes).to.include(event.orderHash);
       }
 
-      const { offerer, conduitKey, consideration, offer } = order.parameters;
+      const { offerer, consideration, offer } = order.parameters;
       const compareEventItems = async (item: any, orderItem: OfferItem | ConsiderationItem, isConsiderationItem: boolean) => {
         expect(item.itemType).to.equal(orderItem.itemType > 3 ? orderItem.itemType - 2 : orderItem.itemType);
         expect(item.token).to.equal(orderItem.token);
@@ -687,7 +687,7 @@ export const marketFixture = async (owner: Wallet) => {
     marketplaceContract,
     domainData,
     signOrder,
-    signBulkOrder,
+
     createOrder,
     withBalanceChecks,
     checkTransferEvent,

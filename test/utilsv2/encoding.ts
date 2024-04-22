@@ -176,7 +176,7 @@ export const calculateOrderHash = (orderComponents: OrderComponents) => {
   const considerationItemTypeString =
     "ConsiderationItem(uint8 itemType,address token,uint256 identifierOrCriteria,uint256 startAmount,uint256 endAmount,address recipient)";
   const orderComponentsPartialTypeString =
-    "OrderComponents(address offerer,address zone,OfferItem[] offer,ConsiderationItem[] consideration,uint8 orderType,uint256 startTime,uint256 endTime,bytes32 zoneHash,uint256 salt,bytes32 conduitKey,uint256 counter)";
+    "OrderComponents(address offerer,OfferItem[] offer,ConsiderationItem[] consideration,uint8 orderType,uint256 startTime,uint256 endTime,uint256 salt,uint256 counter)";
   const orderTypeString = `${orderComponentsPartialTypeString}${considerationItemTypeString}${offerItemTypeString}`;
 
   const offerItemTypeHash = keccak256(toUtf8Bytes(offerItemTypeString));
@@ -247,7 +247,6 @@ export const calculateOrderHash = (orderComponents: OrderComponents) => {
       [
         orderTypeHash.slice(2),
         orderComponents.offerer.slice(2).padStart(64, "0"),
-        orderComponents.zone.slice(2).padStart(64, "0"),
         offerHash.slice(2),
         considerationHash.slice(2),
         orderComponents.orderType.toString().padStart(64, "0"),
@@ -256,65 +255,13 @@ export const calculateOrderHash = (orderComponents: OrderComponents) => {
           .slice(2)
           .padStart(64, "0"),
         toBN(orderComponents.endTime).toHexString().slice(2).padStart(64, "0"),
-        orderComponents.zoneHash.slice(2),
         orderComponents.salt.slice(2).padStart(64, "0"),
-        orderComponents.conduitKey.slice(2).padStart(64, "0"),
         toBN(orderComponents.counter).toHexString().slice(2).padStart(64, "0"),
       ].join("")
   );
-
   return derivedOrderHash;
 };
 
-export const getBasicOrderExecutions = (
-  order: Order,
-  fulfiller: string,
-  fulfillerConduitKey: string
-) => {
-  const { offerer, conduitKey, offer, consideration } = order.parameters;
-  const offerItem = offer[0];
-  const considerationItem = consideration[0];
-  const executions = [
-    {
-      item: {
-        ...offerItem,
-        amount: offerItem.endAmount,
-        recipient: fulfiller,
-      },
-      offerer,
-      conduitKey,
-    },
-    {
-      item: {
-        ...considerationItem,
-        amount: considerationItem.endAmount,
-      },
-      offerer: fulfiller,
-      conduitKey: fulfillerConduitKey,
-    },
-  ];
-  if (consideration.length > 1) {
-    for (const additionalRecipient of consideration.slice(1)) {
-      const execution = {
-        item: {
-          ...additionalRecipient,
-          amount: additionalRecipient.endAmount,
-        },
-        offerer: fulfiller,
-        conduitKey: fulfillerConduitKey,
-      };
-      if (additionalRecipient.itemType === offerItem.itemType) {
-        execution.offerer = offerer;
-        execution.conduitKey = conduitKey;
-        executions[0].item.amount = executions[0].item.amount.sub(
-          execution.item.amount
-        );
-      }
-      executions.push(execution);
-    }
-  }
-  return executions;
-};
 
 export const defaultBuyNowMirrorFulfillment = [
   [[[0, 0]], [[1, 0]]],

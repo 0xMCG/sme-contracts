@@ -8,17 +8,7 @@ import {
     BadReturnValueFromERC20OnTransfer_error_selector,
     BadReturnValueFromERC20OnTransfer_error_to_ptr,
     BadReturnValueFromERC20OnTransfer_error_token_ptr,
-    BatchTransfer1155Params_amounts_head_ptr,
-    BatchTransfer1155Params_calldata_baseSize,
-    BatchTransfer1155Params_data_head_ptr,
-    BatchTransfer1155Params_data_length_basePtr,
-    BatchTransfer1155Params_ids_head_ptr,
-    BatchTransfer1155Params_ids_length_offset,
-    BatchTransfer1155Params_ids_length_ptr,
-    BatchTransfer1155Params_ptr,
     CostPerWord,
-    DefaultFreeMemoryPointer,
-    ERC1155_safeBatchTransferFrom_signature,
     ERC1155_safeTransferFrom_amount_ptr,
     ERC1155_safeTransferFrom_data_length_offset,
     ERC1155_safeTransferFrom_data_length_ptr,
@@ -29,9 +19,6 @@ import {
     ERC1155_safeTransferFrom_sig_ptr,
     ERC1155_safeTransferFrom_signature,
     ERC1155_safeTransferFrom_to_ptr,
-    ERC1155BatchTransferGenericFailure_error_signature,
-    ERC1155BatchTransferGenericFailure_ids_offset,
-    ERC1155BatchTransferGenericFailure_token_ptr,
     ERC20_transferFrom_amount_ptr,
     ERC20_transferFrom_from_ptr,
     ERC20_transferFrom_length,
@@ -47,9 +34,6 @@ import {
     ExtraGasBuffer,
     FreeMemoryPointerSlot,
     Generic_error_selector_offset,
-    Invalid1155BatchTransferEncoding_length,
-    Invalid1155BatchTransferEncoding_ptr,
-    Invalid1155BatchTransferEncoding_selector,
     MemoryExpansionCoefficientShift,
     NoContract_error_account_ptr,
     NoContract_error_length,
@@ -68,8 +52,6 @@ import {
     TokenTransferGenericFailure_error_selector,
     TokenTransferGenericFailure_error_to_ptr,
     TokenTransferGenericFailure_error_token_ptr,
-    TwoWords,
-    TwoWordsShift,
     ZeroSlot
 } from "./TokenTransferrerConstants.sol";
 
@@ -77,7 +59,7 @@ import { TokenTransferrerErrors } from "./TokenTransferrerErrors.sol";
 
 /**
  * @title TokenTransferrer
- * 
+ *
  * @custom:coauthor d1ll0n
  * @custom:coauthor transmissions11
  * @notice TokenTransferrer is a library for performing optimized ERC20, ERC721,

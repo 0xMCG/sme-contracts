@@ -14,20 +14,16 @@ import {
 } from "./ConsiderationStructs.sol";
 
 import {
-    AdvancedOrder_denominator_offset,
+    
     AdvancedOrder_extraData_offset,
     AdvancedOrder_fixed_segment_0,
     AdvancedOrder_head_size,
     AdvancedOrder_numerator_offset,
     AdvancedOrder_signature_offset,
     AdvancedOrderPlusOrderParameters_head_size,
-    Common_amount_offset,
     Common_endAmount_offset,
     ConsiderationItem_size_with_length,
     ConsiderationItem_size,
-    CriteriaResolver_criteriaProof_offset,
-    CriteriaResolver_fixed_segment_0,
-    CriteriaResolver_head_size,
     FourWords,
     FreeMemoryPointerSlot,
     Fulfillment_considerationComponents_offset,

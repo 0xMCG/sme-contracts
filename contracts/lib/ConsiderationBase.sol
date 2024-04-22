@@ -10,19 +10,14 @@ import { OrderStatus } from "./ConsiderationStructs.sol";
 import "./ConsiderationErrors.sol";
 import { SignatureVerification } from "./SignatureVerification.sol";
 import { Executor } from "./Executor.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 /**
  * @title ConsiderationBase
  *
  * @notice ConsiderationBase contains immutable constants and constructor logic.
  */
-contract ConsiderationBase is
-    ConsiderationDecoder,
-    ConsiderationEventsAndErrors,
-    SignatureVerification,
-    Executor
-{
+contract ConsiderationBase is ConsiderationDecoder, ConsiderationEventsAndErrors, SignatureVerification, Executor {
     // Precompute hashes, original chainId, and domain separator on deployment.
     bytes32 internal immutable _NAME_HASH;
     bytes32 internal immutable _VERSION_HASH;
@@ -101,7 +96,9 @@ contract ConsiderationBase is
         return (orderStatus.isValidated, orderStatus.isCancelled, orderStatus.numerator, orderStatus.denominator);
     }
 
-    function _getLastMatchStatus(bytes32 orderHash) internal view returns (uint120 numerator, uint120 denominator, uint256 timestamp) {
+    function _getLastMatchStatus(
+        bytes32 orderHash
+    ) internal view returns (uint120 numerator, uint120 denominator, uint256 timestamp) {
         LastMatchStatus storage lastMatchStatus = _lastMatchStatus[orderHash];
         return (lastMatchStatus.numerator, lastMatchStatus.denominator, lastMatchStatus.timestamp);
     }
@@ -246,15 +243,12 @@ contract ConsiderationBase is
         bytes memory orderComponentsPartialTypeString = bytes(
             "OrderComponents("
             "address offerer,"
-            "address zone,"
             "OfferItem[] offer,"
             "ConsiderationItem[] consideration,"
             "uint8 orderType,"
             "uint256 startTime,"
             "uint256 endTime,"
-            "bytes32 zoneHash,"
             "uint256 salt,"
-            "bytes32 conduitKey,"
             "uint256 counter"
             ")"
         );
@@ -285,187 +279,6 @@ contract ConsiderationBase is
 
         // Derive OrderItem type hash via combination of relevant type strings.
         orderTypehash = keccak256(orderTypeString);
-    }
-
-    /**
-     * @dev Internal pure function to look up one of twenty-four potential bulk
-     *      order typehash constants based on the height of the bulk order tree.
-     *      Note that values between one and twenty-four are supported, which is
-     *      enforced by _isValidBulkOrderSize.
-     *
-     * @param _treeHeight The height of the bulk order tree. The value must be
-     *                    between one and twenty-four.
-     *
-     * @return _typeHash The EIP-712 typehash for the bulk order type with the
-     *                   given height.
-     */
-    function _lookupBulkOrderTypehash(uint256 _treeHeight) internal pure returns (bytes32 _typeHash) {
-        // Utilize assembly to efficiently retrieve correct bulk order typehash.
-        assembly {
-            // Use a Yul function to enable use of the `leave` keyword
-            // to stop searching once the appropriate type hash is found.
-            function lookupTypeHash(treeHeight) -> typeHash {
-                // Handle tree heights one through eight.
-                if lt(treeHeight, 9) {
-                    // Handle tree heights one through four.
-                    if lt(treeHeight, 5) {
-                        // Handle tree heights one and two.
-                        if lt(treeHeight, 3) {
-                            // Utilize branchless logic to determine typehash.
-                            typeHash := ternary(
-                                eq(treeHeight, 1),
-                                BulkOrder_Typehash_Height_One,
-                                BulkOrder_Typehash_Height_Two
-                            )
-
-                            // Exit the function once typehash has been located.
-                            leave
-                        }
-
-                        // Handle height three and four via branchless logic.
-                        typeHash := ternary(
-                            eq(treeHeight, 3),
-                            BulkOrder_Typehash_Height_Three,
-                            BulkOrder_Typehash_Height_Four
-                        )
-
-                        // Exit the function once typehash has been located.
-                        leave
-                    }
-
-                    // Handle tree height five and six.
-                    if lt(treeHeight, 7) {
-                        // Utilize branchless logic to determine typehash.
-                        typeHash := ternary(
-                            eq(treeHeight, 5),
-                            BulkOrder_Typehash_Height_Five,
-                            BulkOrder_Typehash_Height_Six
-                        )
-
-                        // Exit the function once typehash has been located.
-                        leave
-                    }
-
-                    // Handle height seven and eight via branchless logic.
-                    typeHash := ternary(
-                        eq(treeHeight, 7),
-                        BulkOrder_Typehash_Height_Seven,
-                        BulkOrder_Typehash_Height_Eight
-                    )
-
-                    // Exit the function once typehash has been located.
-                    leave
-                }
-
-                // Handle tree height nine through sixteen.
-                if lt(treeHeight, 17) {
-                    // Handle tree height nine through twelve.
-                    if lt(treeHeight, 13) {
-                        // Handle tree height nine and ten.
-                        if lt(treeHeight, 11) {
-                            // Utilize branchless logic to determine typehash.
-                            typeHash := ternary(
-                                eq(treeHeight, 9),
-                                BulkOrder_Typehash_Height_Nine,
-                                BulkOrder_Typehash_Height_Ten
-                            )
-
-                            // Exit the function once typehash has been located.
-                            leave
-                        }
-
-                        // Handle height eleven and twelve via branchless logic.
-                        typeHash := ternary(
-                            eq(treeHeight, 11),
-                            BulkOrder_Typehash_Height_Eleven,
-                            BulkOrder_Typehash_Height_Twelve
-                        )
-
-                        // Exit the function once typehash has been located.
-                        leave
-                    }
-
-                    // Handle tree height thirteen and fourteen.
-                    if lt(treeHeight, 15) {
-                        // Utilize branchless logic to determine typehash.
-                        typeHash := ternary(
-                            eq(treeHeight, 13),
-                            BulkOrder_Typehash_Height_Thirteen,
-                            BulkOrder_Typehash_Height_Fourteen
-                        )
-
-                        // Exit the function once typehash has been located.
-                        leave
-                    }
-                    // Handle height fifteen and sixteen via branchless logic.
-                    typeHash := ternary(
-                        eq(treeHeight, 15),
-                        BulkOrder_Typehash_Height_Fifteen,
-                        BulkOrder_Typehash_Height_Sixteen
-                    )
-
-                    // Exit the function once typehash has been located.
-                    leave
-                }
-
-                // Handle tree height seventeen through twenty.
-                if lt(treeHeight, 21) {
-                    // Handle tree height seventeen and eighteen.
-                    if lt(treeHeight, 19) {
-                        // Utilize branchless logic to determine typehash.
-                        typeHash := ternary(
-                            eq(treeHeight, 17),
-                            BulkOrder_Typehash_Height_Seventeen,
-                            BulkOrder_Typehash_Height_Eighteen
-                        )
-
-                        // Exit the function once typehash has been located.
-                        leave
-                    }
-
-                    // Handle height nineteen and twenty via branchless logic.
-                    typeHash := ternary(
-                        eq(treeHeight, 19),
-                        BulkOrder_Typehash_Height_Nineteen,
-                        BulkOrder_Typehash_Height_Twenty
-                    )
-
-                    // Exit the function once typehash has been located.
-                    leave
-                }
-
-                // Handle tree height twenty-one and twenty-two.
-                if lt(treeHeight, 23) {
-                    // Utilize branchless logic to determine typehash.
-                    typeHash := ternary(
-                        eq(treeHeight, 21),
-                        BulkOrder_Typehash_Height_TwentyOne,
-                        BulkOrder_Typehash_Height_TwentyTwo
-                    )
-
-                    // Exit the function once typehash has been located.
-                    leave
-                }
-
-                // Handle height twenty-three & twenty-four w/ branchless logic.
-                typeHash := ternary(
-                    eq(treeHeight, 23),
-                    BulkOrder_Typehash_Height_TwentyThree,
-                    BulkOrder_Typehash_Height_TwentyFour
-                )
-
-                // Exit the function once typehash has been located.
-                leave
-            }
-
-            // Implement ternary conditional using branchless logic.
-            function ternary(cond, ifTrue, ifFalse) -> c {
-                c := xor(ifFalse, mul(cond, xor(ifFalse, ifTrue)))
-            }
-
-            // Look up the typehash using the supplied tree height.
-            _typeHash := lookupTypeHash(_treeHeight)
-        }
     }
 
     /**
@@ -526,15 +339,7 @@ contract ConsiderationBase is
         uint256 originalSignatureLength = signature.length;
 
         // Determine effective digest if signature has a valid bulk order size.
-        bytes32 digest;
-        if (_isValidBulkOrderSize(originalSignatureLength)) {
-            // Rederive order hash and digest using bulk order proof.
-            (orderHash) = _computeBulkOrderProof(signature, orderHash);
-            digest = _deriveEIP712Digest(domainSeparator, orderHash);
-        } else {
-            // Supply the original digest as the effective digest.
-            digest = originalDigest;
-        }
+        bytes32 digest = originalDigest;
 
         // Ensure that the signature for the digest is valid for the offerer.
         _assertValidSignature(offerer, digest, originalDigest, originalSignatureLength, signature);
@@ -584,101 +389,6 @@ contract ConsiderationBase is
         return block.chainid == _CHAIN_ID ? _DOMAIN_SEPARATOR : _deriveDomainSeparator();
     }
 
-    /**
-     * @dev Determines whether the specified bulk order size is valid.
-     *
-     * @param signatureLength The signature length of the bulk order to check.
-     *
-     * @return validLength True if bulk order size is valid, false otherwise.
-     */
-    function _isValidBulkOrderSize(uint256 signatureLength) internal pure returns (bool validLength) {
-        // Utilize assembly to validate the length; the equivalent logic is
-        // (64 + x) + 3 + 32y where (0 <= x <= 1) and (1 <= y <= 24).
-        assembly {
-            validLength := and(
-                lt(sub(signatureLength, BulkOrderProof_minSize), BulkOrderProof_rangeSize),
-                lt(
-                    and(add(signatureLength, BulkOrderProof_lengthAdjustmentBeforeMask), ThirtyOneBytes),
-                    BulkOrderProof_lengthRangeAfterMask
-                )
-            )
-        }
-    }
-
-    /**
-     * @dev Computes the bulk order hash for the specified proof and leaf. Note
-     *      that if an index that exceeds the number of orders in the bulk order
-     *      payload will instead "wrap around" and refer to an earlier index.
-     *
-     * @param proofAndSignature The proof and signature of the bulk order.
-     * @param leaf              The leaf of the bulk order tree.
-     *
-     * @return bulkOrderHash The bulk order hash.
-     */
-    function _computeBulkOrderProof(
-        bytes memory proofAndSignature,
-        bytes32 leaf
-    ) internal pure returns (bytes32 bulkOrderHash) {
-        // Declare arguments for the root hash and the height of the proof.
-        bytes32 root;
-        uint256 height;
-
-        // Utilize assembly to efficiently derive the root hash using the proof.
-        assembly {
-            // Retrieve the length of the proof, key, and signature combined.
-            let fullLength := mload(proofAndSignature)
-
-            // If proofAndSignature has odd length, it is a compact signature
-            // with 64 bytes.
-            let signatureLength := sub(ECDSA_MaxLength, and(fullLength, 1))
-
-            // Derive height (or depth of tree) with signature and proof length.
-            height := shr(OneWordShift, sub(fullLength, signatureLength))
-
-            // Update the length in memory to only include the signature.
-            mstore(proofAndSignature, signatureLength)
-
-            // Derive the pointer for the key using the signature length.
-            let keyPtr := add(proofAndSignature, add(OneWord, signatureLength))
-
-            // Retrieve the three-byte key using the derived pointer.
-            let key := shr(BulkOrderProof_keyShift, mload(keyPtr))
-
-            /// Retrieve pointer to first proof element by applying a constant
-            // for the key size to the derived key pointer.
-            let proof := add(keyPtr, BulkOrderProof_keySize)
-
-            // Compute level 1.
-            let scratchPtr1 := shl(OneWordShift, and(key, 1))
-            mstore(scratchPtr1, leaf)
-            mstore(xor(scratchPtr1, OneWord), mload(proof))
-
-            // Compute remaining proofs.
-            for {
-                let i := 1
-            } lt(i, height) {
-                i := add(i, 1)
-            } {
-                proof := add(proof, OneWord)
-                let scratchPtr := shl(OneWordShift, and(shr(i, key), 1))
-                mstore(scratchPtr, keccak256(0, TwoWords))
-                mstore(xor(scratchPtr, OneWord), mload(proof))
-            }
-
-            // Compute root hash.
-            root := keccak256(0, TwoWords)
-        }
-
-        // Retrieve appropriate typehash constant based on height.
-        bytes32 rootTypeHash = _lookupBulkOrderTypehash(height);
-
-        // Use the typehash and the root hash to derive final bulk order hash.
-        assembly {
-            mstore(0, rootTypeHash)
-            mstore(OneWord, root)
-            bulkOrderHash := keccak256(0, TwoWords)
-        }
-    }
 
     /**
      * @dev Internal view function to validate that a given order is fillable
@@ -1243,7 +953,6 @@ contract ConsiderationBase is
                 OrderComponents calldata order = orders[i];
 
                 address offerer = order.offerer;
-                address zone = order.zone;
                 OrderType orderType = order.orderType;
 
                 assembly {
@@ -1253,7 +962,7 @@ contract ConsiderationBase is
                         anyInvalidCallerOrContractOrder,
                         // orderType == CONTRACT ||
                         // !(caller == offerer || caller == zone)
-                        or(eq(orderType, 4), iszero(or(eq(caller(), offerer), eq(caller(), zone))))
+                        or(eq(orderType, 4), iszero(eq(caller(), offerer)))
                     )
                 }
 
@@ -1272,7 +981,7 @@ contract ConsiderationBase is
                 orderStatus.isCancelled = true;
 
                 // Emit an event signifying that the order has been cancelled.
-                emit OrderCancelled(orderHash, offerer, zone);
+                emit OrderCancelled(orderHash, offerer);
 
                 // Increment counter inside body of loop for gas efficiency.
                 ++i;
