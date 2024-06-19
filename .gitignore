@@ -43,3 +43,6 @@ metrics.txt
 *-metrics.txt
 
 fuzz_debug.json
+/.idea
+/yarn.lock
+/package-lock.json
