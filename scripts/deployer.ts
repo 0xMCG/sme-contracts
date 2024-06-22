@@ -7,9 +7,9 @@ const VRFConfig: {
   [k: string]: { coor: string; subId: BigNumberish; keyHash: string };
 } = {
   sepolia: {
-    coor: "0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625",
-    subId: 7066,
-    keyHash: "0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c",
+    coor: "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B",
+    subId: 88287894418893955350156106731922667574706298581066323091458404590883695184525,
+    keyHash: "0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae",
   },
   arbitrum_sepolia: {
     coor: "0x50d47e4142598E3411aA864e08a44284e471AC6f",
@@ -24,9 +24,9 @@ const VRFConfig: {
 };
 
 const MemberConfig: { [k: string]: string } = {
-  sepolia: "0x7ddBFF9D74D0A2F33Dfb13cEC538B334f2011462",
-  arb_sepolia: "0x0da3C82d0785ad289Be2Cb6cE7382a879E72d18b",
-  arbitrum_sepolia: "0x7ddBFF9D74D0A2F33Dfb13cEC538B334f2011462",
+  sepolia: "0x7a9b890aEC794B8EFfdCd6b743A6A3AF950e99F9",
+  arb_sepolia: "0x7a9b890aEC794B8EFfdCd6b743A6A3AF950e99F9",
+  arbitrum_sepolia: "0x7a9b890aEC794B8EFfdCd6b743A6A3AF950e99F9",
 };
 
 async function main() {
@@ -50,6 +50,8 @@ async function main() {
   ]);
   const vrf = await ethers.getContractAt("VRFConsumerV2", vrfAddress);
   const roleMarket = await vrf.MARKET();
+  console.log("roleMarket");
+  console.log(roleMarket);
   if (!(await vrf.hasRole(roleMarket, marketAddress))) {
     await vrf.connect(owner).grantRole(roleMarket, marketAddress, { gasLimit: 2000000 }).then(wait1Tx);
   }

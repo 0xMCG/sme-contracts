@@ -2,9 +2,8 @@
 // An example of a consumer contract that relies on a subscription for funding.
 pragma solidity ^0.8.7;
 
-// import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/dev/vrf/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/dev/vrf/libraries/VRFV2PlusClient.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 // import {Executor} from "seaport-core/lib/Executor.sol";
@@ -12,10 +11,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  * @title The VRFConsumerV2 contract
  * @notice A contract that gets random values from Chainlink VRF V2
  */
-contract VRFConsumerV2 is VRFConsumerBaseV2, AccessControl {
-    VRFCoordinatorV2Interface immutable COORDINATOR;
-    // LinkTokenInterface immutable LINKTOKEN;
-    // ISeaportContract immutable Seaport;
+contract VRFConsumerV2 is VRFConsumerBaseV2Plus, AccessControl {
 
     // Your subscription ID.
     uint64 immutable s_subscriptionId;
@@ -59,8 +55,7 @@ contract VRFConsumerV2 is VRFConsumerBaseV2, AccessControl {
      * @param vrfCoordinator - coordinator, check https://docs.chain.link/docs/vrf-contracts/#configurations
      * @param keyHash - the gas lane to use, which specifies the maximum gas price to bump to
      */
-    constructor(uint64 subscriptionId, address vrfCoordinator, bytes32 keyHash) VRFConsumerBaseV2(vrfCoordinator) {
-        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
+    constructor(uint64 subscriptionId, address vrfCoordinator, bytes32 keyHash) VRFConsumerBaseV2Plus(vrfCoordinator) {
         // LINKTOKEN = LinkTokenInterface(link);
         s_keyHash = keyHash;
         s_owner = msg.sender;
@@ -82,14 +77,22 @@ contract VRFConsumerV2 is VRFConsumerBaseV2, AccessControl {
      * Assumes the subscription is funded sufficiently; "Words" refers to unit of data in Computer Science
      */
     function requestRandomWords(uint32 s_numWords) external onlyRole(MARKET) returns (uint256) {
-        // Will revert if subscription is not set and funded.
-        s_requestId = COORDINATOR.requestRandomWords(
-            s_keyHash,
-            s_subscriptionId,
-            s_requestConfirmations,
-            s_callbackGasLimit,
-            s_numWords
+
+        s_requestId = s_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: s_keyHash,
+                subId: s_subscriptionId,
+                requestConfirmations: s_requestConfirmations,
+                callbackGasLimit: s_callbackGasLimit,
+                numWords: s_numWords,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                        VRFV2PlusClient.ExtraArgsV1({
+                            nativePayment: false
+                        })
+                    )
+            })
         );
+
         return s_requestId;
     }
 
