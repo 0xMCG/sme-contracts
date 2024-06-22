@@ -33,14 +33,16 @@ async function main() {
   const owner = (await ethers.getSigners())[0];
   if (!owner) throw "No signers";
 
+  const salt = "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337";
+
   // Market
-  const marketAddress = await deployUseCreate2("SmeMarket", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337");
+  const marketAddress = await deployUseCreate2("SmeMarket", salt);
   const market = await ethers.getContractAt("SmeMarket", marketAddress);
 
   // VRFConsumer
   if (!VRFConfig[network.name]) throw "Network not support!";
   const config = VRFConfig[network.name];
-  const vrfAddress = await deployUseCreate2("VRFConsumerV2", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337", [
+  const vrfAddress = await deployUseCreate2("VRFConsumerV2", salt, [
     "uint256",
     "address",
     "bytes32",
@@ -48,17 +50,19 @@ async function main() {
     config.coor,
     config.keyHash,
   ]);
-  
+
 const vrf = await ethers.getContractAt("VRFConsumerV2", vrfAddress);
 const roleMarket = await vrf.MARKET();
-console.log("roleMarket");
-console.log(roleMarket);
 if (!(await vrf.hasRole(roleMarket, marketAddress))) {
   await vrf.connect(owner).grantRole(roleMarket, marketAddress, { gasLimit: 2000000 }).then(wait1Tx);
 }
 
 // SmeGasManager
-const smeGasManagerAddress = await deployContract("SmeGasManager", [parseEther("0.0001").toString()]);
+//const smeGasManagerAddress = await deployContract("SmeGasManager", [parseEther("0.0001").toString()]);
+  const SmeGasManager = await ethers.getContractFactory("SmeGasManager");
+  const smeGasManager = await SmeGasManager.deploy(parseEther("0.0001").toString());
+  const smeGasManagerAddress = smeGasManager.address;
+  console.info("deplyed:", "SmeGasManager", smeGasManagerAddress);
 
 // setMember;
 if (MemberConfig[network.name]) {
