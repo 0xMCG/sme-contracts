@@ -46,4 +46,3 @@ fuzz_debug.json
 /.idea
 /yarn.lock
 /package-lock.json
-/json
