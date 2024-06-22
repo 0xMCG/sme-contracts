@@ -34,13 +34,13 @@ async function main() {
   if (!owner) throw "No signers";
 
   // Market
-  const marketAddress = await deployUseCreate2("SmeMarket", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d5559");
+  const marketAddress = await deployUseCreate2("SmeMarket", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337");
   const market = await ethers.getContractAt("SmeMarket", marketAddress);
 
   // VRFConsumer
   if (!VRFConfig[network.name]) throw "Network not support!";
   const config = VRFConfig[network.name];
-  const vrfAddress = await deployUseCreate2("VRFConsumerV2", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d3333", [
+  const vrfAddress = await deployUseCreate2("VRFConsumerV2", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337", [
     "uint64",
     "address",
     "bytes32",
