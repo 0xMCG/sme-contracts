@@ -81,20 +81,6 @@ contract SmeMarket is Ownable, ReentrancyGuard, ConsiderationBase {
         return requestId;
     }
 
-    event TestOrderEvent(AdvancedOrder[]  advancedOrders );
-
-    function testOrderEvent(
-        AdvancedOrder[] calldata,
-        uint256[] calldata premiumOrdersIndex,
-        address[] calldata recipients,
-        uint32 numWords
-    ) external {
-        AdvancedOrder[] memory advancedOrders =
-            _toAdvancedOrdersReturnType(_decodeAdvancedOrders)(CalldataStart.pptr());
-
-        emit TestOrderEvent(advancedOrders);
-    }
-
     function cancelPrepared(uint256 requestId, AdvancedOrder[] calldata orders) external {
         bytes32[] memory existingOrderHahes = originalOrderHashes[requestId];
         uint256 orderSize = orders.length;
