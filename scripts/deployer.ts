@@ -41,17 +41,14 @@ async function main() {
   if (!VRFConfig[network.name]) throw "Network not support!";
   const config = VRFConfig[network.name];
   const vrfAddress = await deployUseCreate2("VRFConsumerV2", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337", [
-    //"uint64",
+    "uint256",
     "address",
     "bytes32",
-    //BigNumber.from(config.subId),
+    BigNumber.from(config.subId),
     config.coor,
     config.keyHash,
   ]);
-  /*const VRFConsumerV2 = await ethers.getContractFactory("VRFConsumerV2");
-  const vRFConsumerV2 = await VRFConsumerV2.deploy(config.subId, config.coor, config.keyHash);
-  const vrfAddress = vRFConsumerV2.address;*/
-
+  
 const vrf = await ethers.getContractAt("VRFConsumerV2", vrfAddress);
 const roleMarket = await vrf.MARKET();
 console.log("roleMarket");
