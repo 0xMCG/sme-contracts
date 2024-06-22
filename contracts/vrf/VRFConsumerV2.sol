@@ -55,11 +55,11 @@ contract VRFConsumerV2 is VRFConsumerBaseV2Plus, AccessControl {
      * @param vrfCoordinator - coordinator, check https://docs.chain.link/docs/vrf-contracts/#configurations
      * @param keyHash - the gas lane to use, which specifies the maximum gas price to bump to
      */
-    constructor(uint64 subscriptionId, address vrfCoordinator, bytes32 keyHash) VRFConsumerBaseV2Plus(vrfCoordinator) {
+    constructor(address vrfCoordinator, bytes32 keyHash) VRFConsumerBaseV2Plus(vrfCoordinator) {
         // LINKTOKEN = LinkTokenInterface(link);
         s_keyHash = keyHash;
         s_owner = msg.sender;
-        s_subscriptionId = subscriptionId;
+        s_subscriptionId = 88287894418893955350156106731922667574706298581066323091458404590883695184525;
 
         _grantRole(DEFAULT_ADMIN_ROLE, tx.origin);
     }

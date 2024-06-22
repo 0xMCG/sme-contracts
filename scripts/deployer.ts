@@ -1,4 +1,4 @@
-import { BigNumberish } from "ethers";
+import {BigNumber, BigNumberish} from "ethers";
 import { ethers, network } from "hardhat";
 import { deployContract, deployUseCreate2, saveAny, wait1Tx } from "./hutils";
 import { parseEther } from "ethers/lib/utils";
@@ -8,7 +8,7 @@ const VRFConfig: {
 } = {
   sepolia: {
     coor: "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B",
-    subId: "0xc3312d6a191892f87feab6a82e1b32d72abd5a112a2a67dc854f7ef0accb4a8d",
+    subId: "88287894418893955350156106731922667574706298581066323091458404590883695184525",
     keyHash: "0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae",
   },
   arbitrum_sepolia: {
@@ -41,33 +41,37 @@ async function main() {
   if (!VRFConfig[network.name]) throw "Network not support!";
   const config = VRFConfig[network.name];
   const vrfAddress = await deployUseCreate2("VRFConsumerV2", "0x0000000000000000000000000000000000000000d4b6fcc21169b803f25d2337", [
-    "uint64",
+    //"uint64",
     "address",
     "bytes32",
-    config.subId,
+    //BigNumber.from(config.subId),
     config.coor,
     config.keyHash,
   ]);
-  const vrf = await ethers.getContractAt("VRFConsumerV2", vrfAddress);
-  const roleMarket = await vrf.MARKET();
-  console.log("roleMarket");
-  console.log(roleMarket);
-  if (!(await vrf.hasRole(roleMarket, marketAddress))) {
-    await vrf.connect(owner).grantRole(roleMarket, marketAddress, { gasLimit: 2000000 }).then(wait1Tx);
-  }
+  /*const VRFConsumerV2 = await ethers.getContractFactory("VRFConsumerV2");
+  const vRFConsumerV2 = await VRFConsumerV2.deploy(config.subId, config.coor, config.keyHash);
+  const vrfAddress = vRFConsumerV2.address;*/
 
-  // SmeGasManager
-  const smeGasManagerAddress = await deployContract("SmeGasManager", [parseEther("0.0001").toString()]);
+const vrf = await ethers.getContractAt("VRFConsumerV2", vrfAddress);
+const roleMarket = await vrf.MARKET();
+console.log("roleMarket");
+console.log(roleMarket);
+if (!(await vrf.hasRole(roleMarket, marketAddress))) {
+  await vrf.connect(owner).grantRole(roleMarket, marketAddress, { gasLimit: 2000000 }).then(wait1Tx);
+}
 
-  // setMember;
-  if (MemberConfig[network.name]) {
-    await market.addMember(MemberConfig[network.name], { gasLimit: 2000000 }).then(wait1Tx);
-    console.info("added members");
-  }
+// SmeGasManager
+const smeGasManagerAddress = await deployContract("SmeGasManager", [parseEther("0.0001").toString()]);
 
-  // updateVRF
-  const oldVrf = await market.vrfOwner();
-  if (oldVrf !== vrfAddress) await market.updateVRFAddress(vrfAddress).then(wait1Tx);
-  console.info("updated vrf");
+// setMember;
+if (MemberConfig[network.name]) {
+  await market.addMember(MemberConfig[network.name], { gasLimit: 2000000 }).then(wait1Tx);
+  console.info("added members");
+}
+
+// updateVRF
+const oldVrf = await market.vrfOwner();
+if (oldVrf !== vrfAddress) await market.updateVRFAddress(vrfAddress).then(wait1Tx);
+console.info("updated vrf");
 }
 main();
